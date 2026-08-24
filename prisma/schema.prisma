@@ -1,0 +1,183 @@
+// Prisma Schema for Content Intelligence Platform
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String      @id @default(uuid())
+  email        String      @unique
+  passwordHash String
+  name         String?
+  avatarUrl    String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  sessions     Session[]
+  projects     Project[]
+  templates    Template[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Project {
+  id            String         @id @default(uuid())
+  title         String
+  description   String?
+  category      String?        @default("General")
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sources       Source[]
+  generations   Generation[]
+  mediaAssets   MediaAsset[]
+  videoProjects VideoProject[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Source {
+  id          String           @id @default(uuid())
+  title       String
+  sourceType  String           // "TEXT" | "FILE" | "PROMPT"
+  rawContent  String
+  metadata    String?          // JSON metadata (filename, character count, etc)
+  projectId   String
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  analysis    ContentAnalysis?
+  generations Generation[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model ContentAnalysis {
+  id             String   @id @default(uuid())
+  sourceId       String   @unique
+  source         Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  summary        String
+  keyFacts       String   // JSON string array
+  targetAudience String?
+  keyEntities    String?  // JSON string array
+  topics         String?  // JSON string array
+  sentiment      String?  @default("Neutral")
+  createdAt      DateTime @default(now())
+}
+
+model Generation {
+  id                String             @id @default(uuid())
+  title             String
+  projectId         String
+  project           Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceId          String
+  source            Source             @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  status            String             @default("COMPLETED") // "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED"
+  metadata          String?            // JSON configuration (tones, audiences, selected formats)
+  generatedContents GeneratedContent[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+model GeneratedContent {
+  id           String            @id @default(uuid())
+  generationId String
+  generation   Generation        @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  format       String            // "LINKEDIN" | "TWITTER_THREAD" | "INSTAGRAM" | "BLOG" | "EXECUTIVE_SUMMARY" | "BRIEFING" | "EMAIL" | "VIDEO_SCRIPT" | "CUSTOM"
+  platform     String
+  title        String
+  content      String
+  captions     String?           // JSON array or text
+  hashtags     String?           // JSON array or text
+  tone         String?
+  audience     String?
+  purpose      String?
+  validation   ValidationResult?
+  versions     ContentVersion[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model ContentVersion {
+  id            String           @id @default(uuid())
+  contentId     String
+  content       GeneratedContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  body          String
+  changeSummary String?
+  createdAt     DateTime         @default(now())
+}
+
+model Template {
+  id             String   @id @default(uuid())
+  name           String
+  category       String   // "LinkedIn", "Marketing", "News", "Educational", "Professional", "Social Media", "Video", "Announcement"
+  description    String
+  format         String   // "LINKEDIN", "BLOG", etc.
+  defaultTone    String?  @default("Professional")
+  defaultAudience String? @default("General")
+  templatePrompt String
+  isSystem       Boolean  @default(false)
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt      DateTime @default(now())
+}
+
+model MediaAsset {
+  id        String   @id @default(uuid())
+  title     String
+  fileType  String
+  fileUrl   String
+  fileSize  Int?
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model VideoProject {
+  id        String       @id @default(uuid())
+  projectId String
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title     String
+  width     Int          @default(1920)
+  height    Int          @default(1080)
+  fps       Int          @default(30)
+  duration  Float        @default(15.0)
+  scenes    VideoScene[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model VideoScene {
+  id             String       @id @default(uuid())
+  videoProjectId String
+  videoProject   VideoProject @relation(fields: [videoProjectId], references: [id], onDelete: Cascade)
+  orderIndex     Int
+  duration       Float        @default(5.0)
+  textOverlay    String?
+  visualType     String       @default("GRADIENT") // "GRADIENT" | "IMAGE" | "COLOR"
+  visualUrl      String?
+  audioUrl       String?
+  captionData    String?      // Subtitles/captions text
+  transition     String?      @default("FADE")
+  createdAt      DateTime     @default(now())
+}
+
+model ValidationResult {
+  id                    String           @id @default(uuid())
+  contentId             String           @unique
+  content               GeneratedContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  factScore             Int              @default(95)
+  formatComplianceScore Int              @default(98)
+  toneAlignmentScore    Int              @default(90)
+  issues                String           // JSON string array of warning/info flags
+  claimsChecked         String           // JSON string array of verified key facts
+  createdAt             DateTime         @default(now())
+}
