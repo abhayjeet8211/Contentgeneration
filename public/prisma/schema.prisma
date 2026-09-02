@@ -1,0 +1,356 @@
+// Prisma Schema for Content Intelligence Platform
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String      @id @default(uuid())
+  email        String      @unique
+  passwordHash String
+  name         String?
+  avatarUrl    String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  sessions     Session[]
+  projects     Project[]
+  templates    Template[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Project {
+  id            String         @id @default(uuid())
+  title         String
+  description   String?
+  category      String?        @default("General")
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sources       Source[]
+  generations   Generation[]
+  mediaAssets   MediaAsset[]
+  videoProjects VideoProject[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Source {
+  id                   String               @id @default(uuid())
+  title                String
+  sourceType           String               // "TEXT" | "PDF" | "DOCX" | "PPT" | "PPTX" | "IMAGE" | "AUDIO" | "VIDEO" | "YOUTUBE" | "PODCAST" | "WEBPAGE" | "PROMPT"
+  sourceUrl            String?
+  mimeType             String?
+  rawContent           String
+  extractedContent     String?
+  processingStatus     String               @default("COMPLETED") // "UPLOADED" | "VALIDATING" | "PROCESSING" | "ANALYZING" | "COMPLETED" | "FAILED"
+  progressStep         String?
+  errorMessage         String?
+  metadata             String?              // JSON metadata (file size, duration, channel, page count, etc)
+  projectId            String
+  project              Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  analysis             ContentAnalysis?     // Legacy 1-to-1 for backward compatibility
+  contentIntelligence  ContentIntelligence? // Deep structured content intelligence
+  generations          Generation[]
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+}
+
+model ContentAnalysis {
+  id             String   @id @default(uuid())
+  sourceId       String   @unique
+  source         Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  summary        String
+  keyFacts       String   // JSON string array
+  targetAudience String?
+  keyEntities    String?  // JSON string array
+  topics         String?  // JSON string array
+  sentiment      String?  @default("Neutral")
+  createdAt      DateTime @default(now())
+}
+
+model ContentIntelligence {
+  id                   String                @id @default(uuid())
+  sourceId             String                @unique
+  source               Source                @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  title                String?
+  summary              String
+  topics               String                // JSON array of strings
+  keyFacts             String                // JSON array of { fact: string, citation?: string, timestamp?: string, page?: number, slide?: number }
+  claims               String?               // JSON array of { claim: string, sourceRef?: string, verified: boolean }
+  entities             String?               // JSON array of strings
+  dates                String?               // JSON array of { date: string, context: string }
+  locations            String?               // JSON array of strings
+  organizations        String?               // JSON array of strings
+  statistics           String?               // JSON array of { statistic: string, metric: string, value: string, sourceRef?: string }
+  quotations           String?               // JSON array of { quote: string, speaker?: string, timestamp?: string }
+  importantStatements String?               // JSON array of strings
+  timeline             String?               // JSON array of { timeOrDate: string, event: string }
+  targetAudience       String?
+  sentiment            String?               @default("Neutral")
+  confidence           Float                 @default(1.0)
+  transcript           Transcript?
+  videoAnalysis        VideoAnalysis?
+  presentationAnalysis PresentationAnalysis?
+  sourceReferences     SourceReference[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+}
+
+model Transcript {
+  id                    String                @id @default(uuid())
+  contentIntelligenceId String                @unique
+  contentIntelligence   ContentIntelligence   @relation(fields: [contentIntelligenceId], references: [id], onDelete: Cascade)
+  fullText              String
+  language              String?               @default("en")
+  duration              Float?
+  segments              TranscriptSegment[]
+  createdAt             DateTime              @default(now())
+}
+
+model TranscriptSegment {
+  id           String     @id @default(uuid())
+  transcriptId String
+  transcript   Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+  orderIndex   Int
+  startTime    Float      // in seconds
+  endTime      Float      // in seconds
+  text         String
+  speaker      String?
+}
+
+model VideoAnalysis {
+  id                    String                @id @default(uuid())
+  contentIntelligenceId String                @unique
+  contentIntelligence   ContentIntelligence   @relation(fields: [contentIntelligenceId], references: [id], onDelete: Cascade)
+  duration              Float?
+  thumbnailUrl          String?
+  channel               String?
+  scenes                VideoAnalysisScene[]
+  createdAt             DateTime              @default(now())
+}
+
+model VideoAnalysisScene {
+  id                String        @id @default(uuid())
+  videoAnalysisId   String
+  videoAnalysis     VideoAnalysis @relation(fields: [videoAnalysisId], references: [id], onDelete: Cascade)
+  sceneNumber       Int
+  startTime         Float
+  endTime           Float
+  visualDescription String
+  onScreenText      String?
+  cameraFraming     String?
+  motion            String?
+  audioDescription  String?
+}
+
+model PresentationAnalysis {
+  id                    String                      @id @default(uuid())
+  contentIntelligenceId String                      @unique
+  contentIntelligence   ContentIntelligence         @relation(fields: [contentIntelligenceId], references: [id], onDelete: Cascade)
+  slideCount            Int                         @default(0)
+  slides                PresentationAnalysisSlide[]
+  createdAt             DateTime                    @default(now())
+}
+
+model PresentationAnalysisSlide {
+  id                     String               @id @default(uuid())
+  presentationAnalysisId String
+  presentationAnalysis   PresentationAnalysis @relation(fields: [presentationAnalysisId], references: [id], onDelete: Cascade)
+  slideNumber            Int
+  title                  String
+  content                String?
+  bulletPoints           String?              // JSON array of strings
+  speakerNotes           String?
+  layout                 String?              @default("STANDARD")
+  visualPrompt           String?
+}
+
+model SourceReference {
+  id                    String              @id @default(uuid())
+  contentIntelligenceId String
+  contentIntelligence   ContentIntelligence @relation(fields: [contentIntelligenceId], references: [id], onDelete: Cascade)
+  factOrClaim           String
+  sourceType            String              // "YOUTUBE_TIMESTAMP" | "DOCUMENT_PAGE" | "SLIDE_NUMBER" | "WEB_SECTION" | "AUDIO_TIMESTAMP"
+  location              String              // e.g. "00:14:32", "Page 17", "Slide 4", "Paragraph 6"
+  quote                 String?
+  speaker               String?
+  confidence            Float               @default(1.0)
+  createdAt             DateTime            @default(now())
+}
+
+model Generation {
+  id                String             @id @default(uuid())
+  title             String
+  projectId         String
+  project           Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceId          String
+  source            Source             @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  status            String             @default("COMPLETED") // "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED"
+  metadata          String?            // JSON configuration (tones, audiences, selected formats)
+  generatedContents GeneratedContent[]
+  videoPackage      VideoOutputPackage?
+  presentationPackage PresentationOutputPackage?
+  infographicPackage InfographicOutputPackage?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+model GeneratedContent {
+  id           String            @id @default(uuid())
+  generationId String
+  generation   Generation        @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  format       String            // "LINKEDIN" | "TWITTER_THREAD" | "INSTAGRAM" | "BLOG" | "EXECUTIVE_SUMMARY" | "BRIEFING" | "EMAIL" | "VIDEO_SCRIPT" | "VIDEO" | "PRESENTATION" | "INFOGRAPHIC" | "CUSTOM"
+  platform     String
+  title        String
+  content      String
+  captions     String?           // JSON array or text
+  hashtags     String?           // JSON array or text
+  tone         String?
+  audience     String?
+  purpose      String?
+  packageData  String?           // JSON string for advanced packages (video/presentation/infographic)
+  validation   ValidationResult?
+  versions     ContentVersion[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model VideoOutputPackage {
+  id           String     @id @default(uuid())
+  generationId String     @unique
+  generation   Generation @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  title        String
+  hook         String?
+  audience     String?
+  objective    String?
+  duration     String?
+  tone         String?
+  format       String?
+  script       String     // Markdown / text script with hook, sections, CTA
+  storyboard   String     // JSON array of Scene items (sceneNumber, start, end, narration, visual, camera, transition)
+  narration    String?    // JSON array of narration lines with timing
+  subtitles    String?    // JSON array of subtitle segments [{start: 0, end: 4.5, text: "..."}]
+  visualRecs   String?    // JSON array of visual asset recommendations
+  musicRecs    String?    // JSON object with music style, mood, energy, cue transitions
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model PresentationOutputPackage {
+  id           String     @id @default(uuid())
+  generationId String     @unique
+  generation   Generation @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  title        String
+  subtitle     String?
+  audience     String?
+  objective    String?
+  slideCount   Int        @default(6)
+  slides       String     // JSON array of Slide objects (slideNumber, title, mainContent, bulletPoints, visualRec, layoutRec, speakerNotes, sourceReferences)
+  structure    String?    // JSON array of structure flow (Title -> Context -> Problem -> Findings -> Recommendations -> Conclusion)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model InfographicOutputPackage {
+  id           String     @id @default(uuid())
+  generationId String     @unique
+  generation   Generation @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  headline     String
+  subheadline  String?
+  takeaway     String?
+  keyMessages  String     // JSON array of key takeaways
+  statistics   String     // JSON array of { metric, value, label, sourceRef }
+  sections     String     // JSON array of { sectionTitle, sectionType, content, stat, icon, visualRec }
+  layoutRecs   String?    // JSON object (orientation, visual hierarchy, layout format)
+  visualRecs   String?    // JSON array of visual styles, icons, color palettes, charts
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model ContentVersion {
+  id            String           @id @default(uuid())
+  contentId     String
+  content       GeneratedContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  body          String
+  changeSummary String?
+  createdAt     DateTime         @default(now())
+}
+
+model Template {
+  id             String   @id @default(uuid())
+  name           String
+  category       String   // "LinkedIn", "Marketing", "News", "Educational", "Professional", "Social Media", "Video", "Announcement"
+  description    String
+  format         String   // "LINKEDIN", "BLOG", etc.
+  defaultTone    String?  @default("Professional")
+  defaultAudience String? @default("General")
+  templatePrompt String
+  isSystem       Boolean  @default(false)
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt      DateTime @default(now())
+}
+
+model MediaAsset {
+  id        String   @id @default(uuid())
+  title     String
+  fileType  String
+  fileUrl   String
+  fileSize  Int?
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model VideoProject {
+  id        String       @id @default(uuid())
+  projectId String
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title     String
+  width     Int          @default(1920)
+  height    Int          @default(1080)
+  fps       Int          @default(30)
+  duration  Float        @default(15.0)
+  scenes    VideoScene[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model VideoScene {
+  id             String       @id @default(uuid())
+  videoProjectId String
+  videoProject   VideoProject @relation(fields: [videoProjectId], references: [id], onDelete: Cascade)
+  orderIndex     Int
+  duration       Float        @default(5.0)
+  textOverlay    String?
+  visualType     String       @default("GRADIENT") // "GRADIENT" | "IMAGE" | "COLOR"
+  visualUrl      String?
+  audioUrl       String?
+  captionData    String?      // Subtitles/captions text
+  transition     String?      @default("FADE")
+  createdAt      DateTime     @default(now())
+}
+
+model ValidationResult {
+  id                    String           @id @default(uuid())
+  contentId             String           @unique
+  content               GeneratedContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  factScore             Int              @default(95)
+  formatComplianceScore Int              @default(98)
+  toneAlignmentScore    Int              @default(90)
+  issues                String           // JSON string array of warning/info flags
+  claimsChecked         String           // JSON string array of verified key facts
+  createdAt             DateTime         @default(now())
+}
