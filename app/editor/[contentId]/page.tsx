@@ -197,9 +197,9 @@ export default function PostEditorPage({ params }: { params: { contentId: string
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col bg-surface-950">
+      <div className="min-h-screen flex flex-col bg-slate-50">
         <Navbar />
-        <div className="flex-1 flex items-center justify-center text-surface-400 text-sm">
+        <div className="flex-1 flex items-center justify-center text-slate-500 text-sm">
           Loading Post Studio...
         </div>
       </div>
@@ -217,42 +217,42 @@ export default function PostEditorPage({ params }: { params: { contentId: string
   const captionsList: string[] = contentItem?.captions ? JSON.parse(contentItem.captions) : [];
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface-950">
+    <div className="min-h-screen flex flex-col bg-slate-50">
       <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 space-y-6">
         {/* Navigation Bar */}
-        <div className="flex items-center justify-between pb-4 border-b border-surface-800">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-200">
           <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
-              className="p-2 rounded-xl bg-surface-900 border border-surface-800 text-surface-400 hover:text-white transition-colors"
+              className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 shadow-sm transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-brand-300 bg-brand-500/20 px-2 py-0.5 rounded">
+                <span className="text-[10px] font-bold text-brand-700 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded">
                   {contentItem?.platform || 'Post'} Editor
                 </span>
-                <span className="text-xs text-surface-400">• Tone: {contentItem?.tone || 'Professional'}</span>
+                <span className="text-xs text-slate-500">• Tone: {contentItem?.tone || 'Professional'}</span>
               </div>
-              <h1 className="text-xl font-bold text-white tracking-tight mt-0.5">AI Post Studio Studio</h1>
+              <h1 className="text-xl font-bold text-slate-900 tracking-tight mt-0.5">AI Post Studio</h1>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <button
               onClick={() => copyToClipboard(bodyText)}
-              className="px-3.5 py-2 rounded-xl bg-surface-900 border border-surface-800 text-surface-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
+              className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors"
             >
-              <Copy className="w-3.5 h-3.5" />
+              <Copy className="w-3.5 h-3.5 text-slate-500" />
               {copied ? 'Copied!' : 'Copy Text'}
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs shadow-md flex items-center gap-1.5 transition-all disabled:opacity-50"
+              className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs shadow-md shadow-brand-600/20 flex items-center gap-1.5 transition-all disabled:opacity-50"
             >
               <Save className="w-3.5 h-3.5" />
               {saving ? 'Saving...' : 'Save Draft'}
@@ -264,67 +264,67 @@ export default function PostEditorPage({ params }: { params: { contentId: string
           {/* Left Studio Editor Pane */}
           <div className="lg:col-span-7 space-y-4">
             {/* AI Action Toolbar */}
-            <div className="glass-panel p-3 rounded-2xl border-surface-800 flex items-center gap-2 overflow-x-auto">
-              <span className="text-xs font-bold text-brand-400 shrink-0 flex items-center gap-1 px-2">
+            <div className="glass-panel p-3 rounded-2xl border-slate-200 bg-white flex items-center gap-2 overflow-x-auto shadow-sm">
+              <span className="text-xs font-bold text-brand-600 shrink-0 flex items-center gap-1 px-2">
                 <Wand2 className="w-3.5 h-3.5" /> AI Actions:
               </span>
               <button
                 onClick={() => handleAIRewrite('SHORTEN')}
                 disabled={rewriting}
-                className="px-3 py-1.5 rounded-xl bg-surface-900 hover:bg-surface-800 text-surface-300 text-xs font-medium shrink-0 border border-surface-800 transition-colors"
+                className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium shrink-0 border border-slate-200 transition-colors"
               >
                 ⚡ Shorten
               </button>
               <button
                 onClick={() => handleAIRewrite('EXPAND')}
                 disabled={rewriting}
-                className="px-3 py-1.5 rounded-xl bg-surface-900 hover:bg-surface-800 text-surface-300 text-xs font-medium shrink-0 border border-surface-800 transition-colors"
+                className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium shrink-0 border border-slate-200 transition-colors"
               >
                 ➕ Expand
               </button>
               <button
                 onClick={() => handleAIRewrite('SIMPLIFY')}
                 disabled={rewriting}
-                className="px-3 py-1.5 rounded-xl bg-surface-900 hover:bg-surface-800 text-surface-300 text-xs font-medium shrink-0 border border-surface-800 transition-colors"
+                className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium shrink-0 border border-slate-200 transition-colors"
               >
                 💡 Simplify
               </button>
               <button
                 onClick={() => handleAIRewrite('PROFESSIONALIZE')}
                 disabled={rewriting}
-                className="px-3 py-1.5 rounded-xl bg-surface-900 hover:bg-surface-800 text-surface-300 text-xs font-medium shrink-0 border border-surface-800 transition-colors"
+                className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium shrink-0 border border-slate-200 transition-colors"
               >
                 👔 Executive Tone
               </button>
               <button
                 onClick={() => handleAIRewrite('MAKE_ENGAGING')}
                 disabled={rewriting}
-                className="px-3 py-1.5 rounded-xl bg-surface-900 hover:bg-surface-800 text-surface-300 text-xs font-medium shrink-0 border border-surface-800 transition-colors"
+                className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium shrink-0 border border-slate-200 transition-colors"
               >
                 🔥 Make Engaging
               </button>
             </div>
 
             {/* Title & Body Text Editor */}
-            <div className="glass-panel p-6 rounded-3xl border-surface-800 space-y-4">
+            <div className="glass-panel p-6 rounded-3xl border-slate-200 bg-white space-y-4 shadow-sm">
               <div>
-                <label className="block text-[11px] font-semibold text-surface-400 uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
                   Post Headline / Title
                 </label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-surface-900/90 border border-surface-800 text-white font-bold text-base focus:outline-none focus:border-brand-500"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold text-base focus:bg-white focus:outline-none focus:border-brand-500 transition-colors"
                 />
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-[11px] font-semibold text-surface-400 uppercase tracking-wider">
+                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                     Content Body
                   </label>
-                  <span className="text-[11px] text-surface-500">
+                  <span className="text-[11px] text-slate-400">
                     {bodyText.length} characters • {bodyText.split(/\s+/).filter(Boolean).length} words
                   </span>
                 </div>
@@ -332,7 +332,7 @@ export default function PostEditorPage({ params }: { params: { contentId: string
                   rows={14}
                   value={bodyText}
                   onChange={(e) => setBodyText(e.target.value)}
-                  className="w-full p-4 rounded-xl bg-surface-900/90 border border-surface-800 text-white font-mono text-xs leading-relaxed focus:outline-none focus:border-brand-500"
+                  className="w-full p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono text-xs leading-relaxed focus:bg-white focus:outline-none focus:border-brand-500 transition-colors"
                 />
               </div>
             </div>
@@ -341,11 +341,11 @@ export default function PostEditorPage({ params }: { params: { contentId: string
           {/* Right Side Panel: Validation, Intelligence, Hashtags & Versions */}
           <div className="lg:col-span-5 space-y-4">
             {/* Side Panel Tabs */}
-            <div className="flex bg-surface-900 p-1 rounded-2xl border border-surface-800 text-xs font-semibold">
+            <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-semibold">
               <button
                 onClick={() => setActiveTab('validation')}
                 className={`flex-1 py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                  activeTab === 'validation' ? 'bg-brand-600 text-white shadow-md' : 'text-surface-400 hover:text-white'
+                  activeTab === 'validation' ? 'bg-white text-brand-600 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <ShieldCheck className="w-3.5 h-3.5" /> Validation
@@ -353,7 +353,7 @@ export default function PostEditorPage({ params }: { params: { contentId: string
               <button
                 onClick={() => setActiveTab('intelligence')}
                 className={`flex-1 py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                  activeTab === 'intelligence' ? 'bg-brand-600 text-white shadow-md' : 'text-surface-400 hover:text-white'
+                  activeTab === 'intelligence' ? 'bg-white text-brand-600 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5" /> Source Context
@@ -361,7 +361,7 @@ export default function PostEditorPage({ params }: { params: { contentId: string
               <button
                 onClick={() => setActiveTab('hashtags')}
                 className={`flex-1 py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                  activeTab === 'hashtags' ? 'bg-brand-600 text-white shadow-md' : 'text-surface-400 hover:text-white'
+                  activeTab === 'hashtags' ? 'bg-white text-brand-600 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <Hash className="w-3.5 h-3.5" /> Hashtags
@@ -369,7 +369,7 @@ export default function PostEditorPage({ params }: { params: { contentId: string
               <button
                 onClick={() => setActiveTab('versions')}
                 className={`flex-1 py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                  activeTab === 'versions' ? 'bg-brand-600 text-white shadow-md' : 'text-surface-400 hover:text-white'
+                  activeTab === 'versions' ? 'bg-white text-brand-600 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <History className="w-3.5 h-3.5" /> Versions
@@ -378,47 +378,47 @@ export default function PostEditorPage({ params }: { params: { contentId: string
 
             {/* Tab 1: Validation */}
             {activeTab === 'validation' && (
-              <div className="glass-panel p-6 rounded-3xl border-surface-800 space-y-5">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-accent-emerald" /> AI Factual Consistency Audit
+              <div className="glass-panel p-6 rounded-3xl border-slate-200 bg-white space-y-5 shadow-sm">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" /> AI Factual Consistency Audit
                 </h3>
 
                 <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="p-3 bg-surface-900/80 rounded-2xl border border-surface-800">
-                    <p className="text-[10px] text-surface-400 font-semibold uppercase">Fact Score</p>
-                    <p className="text-xl font-black text-accent-emerald mt-0.5">{validation?.factScore || 98}%</p>
+                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                    <p className="text-[10px] text-slate-500 font-semibold uppercase">Fact Score</p>
+                    <p className="text-xl font-black text-emerald-600 mt-0.5">{validation?.factScore || 98}%</p>
                   </div>
-                  <div className="p-3 bg-surface-900/80 rounded-2xl border border-surface-800">
-                    <p className="text-[10px] text-surface-400 font-semibold uppercase">Compliance</p>
-                    <p className="text-xl font-black text-accent-cyan mt-0.5">{validation?.formatComplianceScore || 99}%</p>
+                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                    <p className="text-[10px] text-slate-500 font-semibold uppercase">Compliance</p>
+                    <p className="text-xl font-black text-sky-600 mt-0.5">{validation?.formatComplianceScore || 99}%</p>
                   </div>
-                  <div className="p-3 bg-surface-900/80 rounded-2xl border border-surface-800">
-                    <p className="text-[10px] text-surface-400 font-semibold uppercase">Tone Match</p>
-                    <p className="text-xl font-black text-brand-400 mt-0.5">{validation?.toneAlignmentScore || 94}%</p>
+                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                    <p className="text-[10px] text-slate-500 font-semibold uppercase">Tone Match</p>
+                    <p className="text-xl font-black text-brand-600 mt-0.5">{validation?.toneAlignmentScore || 94}%</p>
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="text-xs font-semibold uppercase text-surface-400 mb-2">Audit Log Flags</h4>
+                  <h4 className="text-xs font-semibold uppercase text-slate-500 mb-2">Audit Log Flags</h4>
                   <div className="space-y-2">
                     {issuesList.map((iss, i) => (
                       <div
                         key={i}
-                        className="p-2.5 rounded-xl bg-surface-900 border border-surface-800 text-xs flex items-start gap-2"
+                        className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-start gap-2 text-slate-700"
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5 text-accent-emerald shrink-0 mt-0.5" />
-                        <span className="text-surface-300">{iss.message}</span>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                        <span>{iss.message}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="text-xs font-semibold uppercase text-surface-400 mb-2">Verified Key Facts</h4>
-                  <ul className="space-y-1.5 text-xs text-surface-300">
+                  <h4 className="text-xs font-semibold uppercase text-slate-500 mb-2">Verified Key Facts</h4>
+                  <ul className="space-y-1.5 text-xs text-slate-700">
                     {claimsList.map((claim, i) => (
                       <li key={i} className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-accent-emerald" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                         <span>{claim}</span>
                       </li>
                     ))}
@@ -429,17 +429,17 @@ export default function PostEditorPage({ params }: { params: { contentId: string
 
             {/* Tab 2: Intelligence Context */}
             {activeTab === 'intelligence' && (
-              <div className="glass-panel p-6 rounded-3xl border-surface-800 space-y-4">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-brand-400" /> Source Content Intelligence
+              <div className="glass-panel p-6 rounded-3xl border-slate-200 bg-white space-y-4 shadow-sm">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-brand-600" /> Source Content Intelligence
                 </h3>
                 <div>
-                  <h4 className="text-xs font-semibold text-surface-400 uppercase mb-1">Source Title</h4>
-                  <p className="text-xs text-white font-medium">{contentItem?.generation?.source?.title}</p>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">Source Title</h4>
+                  <p className="text-xs text-slate-900 font-medium">{contentItem?.generation?.source?.title}</p>
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-surface-400 uppercase mb-1">Extracted Summary</h4>
-                  <p className="text-xs text-surface-300 leading-relaxed bg-surface-900 p-3 rounded-xl border border-surface-800">
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">Extracted Summary</h4>
+                  <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200">
                     {contentItem?.generation?.source?.analysis?.summary}
                   </p>
                 </div>
@@ -448,9 +448,9 @@ export default function PostEditorPage({ params }: { params: { contentId: string
 
             {/* Tab 3: Hashtags & Captions */}
             {activeTab === 'hashtags' && (
-              <div className="glass-panel p-6 rounded-3xl border-surface-800 space-y-4">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Hash className="w-4 h-4 text-brand-400" /> Targeted Hashtag Suite
+              <div className="glass-panel p-6 rounded-3xl border-slate-200 bg-white space-y-4 shadow-sm">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Hash className="w-4 h-4 text-brand-600" /> Targeted Hashtag Suite
                 </h3>
 
                 <div className="flex flex-wrap gap-2">
@@ -458,7 +458,7 @@ export default function PostEditorPage({ params }: { params: { contentId: string
                     <span
                       key={i}
                       onClick={() => copyToClipboard(tag)}
-                      className="px-3 py-1 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 text-xs font-medium cursor-pointer hover:bg-brand-500/30 transition-colors"
+                      className="px-3 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-200 text-xs font-medium cursor-pointer hover:bg-brand-100 transition-colors"
                     >
                       {tag}
                     </span>
@@ -466,13 +466,13 @@ export default function PostEditorPage({ params }: { params: { contentId: string
                 </div>
 
                 <div className="pt-2">
-                  <h4 className="text-xs font-semibold text-surface-400 uppercase mb-2">Alternative Captions</h4>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2">Alternative Captions</h4>
                   <div className="space-y-2">
                     {captionsList.map((cap, i) => (
                       <div
                         key={i}
                         onClick={() => copyToClipboard(cap)}
-                        className="p-3 rounded-xl bg-surface-900 border border-surface-800 text-xs text-surface-300 cursor-pointer hover:border-brand-500/40 transition-colors"
+                        className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 cursor-pointer hover:border-brand-300 hover:bg-white transition-colors"
                       >
                         "{cap}"
                       </div>
@@ -484,24 +484,24 @@ export default function PostEditorPage({ params }: { params: { contentId: string
 
             {/* Tab 4: Versions */}
             {activeTab === 'versions' && (
-              <div className="glass-panel p-6 rounded-3xl border-surface-800 space-y-4">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <History className="w-4 h-4 text-brand-400" /> Content Version History
+              <div className="glass-panel p-6 rounded-3xl border-slate-200 bg-white space-y-4 shadow-sm">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <History className="w-4 h-4 text-brand-600" /> Content Version History
                 </h3>
 
                 <div className="space-y-3">
                   {contentItem?.versions?.map((ver) => (
                     <div
                       key={ver.id}
-                      className="p-3 rounded-2xl bg-surface-900 border border-surface-800 flex items-center justify-between text-xs"
+                      className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs"
                     >
                       <div>
-                        <span className="font-bold text-white">Version {ver.versionNumber}</span>
-                        <p className="text-[11px] text-surface-400 mt-0.5">{ver.changeSummary || 'Edit snapshot'}</p>
+                        <span className="font-bold text-slate-900">Version {ver.versionNumber}</span>
+                        <p className="text-[11px] text-slate-500 mt-0.5">{ver.changeSummary || 'Edit snapshot'}</p>
                       </div>
                       <button
                         onClick={() => setBodyText(ver.body)}
-                        className="px-3 py-1 rounded-lg bg-surface-800 text-brand-300 font-semibold hover:bg-brand-600 hover:text-white transition-colors text-[11px]"
+                        className="px-3 py-1 rounded-lg bg-white border border-slate-200 text-brand-700 font-semibold hover:bg-brand-50 transition-colors text-[11px] shadow-sm"
                       >
                         Restore
                       </button>

@@ -11,7 +11,14 @@ const registerSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    let body: unknown;
+
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
+    }
+
     const { email, password, name } = registerSchema.parse(body);
 
     const existingUser = await prisma.user.findUnique({

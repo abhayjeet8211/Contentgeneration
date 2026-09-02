@@ -10,7 +10,14 @@ const loginSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    let body: unknown;
+
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
+    }
+
     const { email, password } = loginSchema.parse(body);
 
     const user = await prisma.user.findUnique({

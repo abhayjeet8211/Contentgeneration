@@ -7,8 +7,11 @@ import { z } from 'zod';
 const generationSchema = z.object({
   projectId: z.string().optional(),
   sourceTitle: z.string().min(1),
-  sourceType: z.enum(['TEXT', 'FILE', 'PROMPT']),
-  rawContent: z.string().min(10, 'Source content must be at least 10 characters'),
+  sourceType: z.string().default('TEXT'),
+  sourceUrl: z.string().optional(),
+  mimeType: z.string().optional(),
+  rawContent: z.string().min(1, 'Source content must not be empty'),
+  extractedContent: z.string().optional(),
   formats: z.array(z.string()).min(1, 'Select at least one output format'),
   customFormatDescription: z.string().optional(),
   tone: z.string().default('Professional'),
@@ -21,11 +24,9 @@ const generationSchema = z.object({
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
-    // Allow guest demo execution if no user logged in by generating under demo system user or requiring auth
     let userId = user?.id;
 
     if (!userId) {
-      // Find or create demo user for unauthenticated browser sessions
       const demoUser = await prisma.user.upsert({
         where: { email: 'demo@content-intel.app' },
         update: {},
@@ -46,7 +47,10 @@ export async function POST(req: Request) {
       projectId: data.projectId,
       sourceTitle: data.sourceTitle,
       sourceType: data.sourceType,
+      sourceUrl: data.sourceUrl,
+      mimeType: data.mimeType,
       rawContent: data.rawContent,
+      extractedContent: data.extractedContent,
       config: {
         formats: data.formats,
         customFormatDescription: data.customFormatDescription,

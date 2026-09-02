@@ -14,20 +14,24 @@ export async function POST(req: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Save locally
-    const storedFile = await saveUploadedFile(buffer, file.name, file.type);
+    // Save to local upload storage
+    const stored = await saveUploadedFile(buffer, file.name, file.type || 'application/octet-stream');
 
-    // Extract text content
+    // Parse text and metadata
     const parsed = await parseDocumentBuffer(buffer, file.name, file.type);
-    console.log("parsed source: ", parsed);
+
     return NextResponse.json({
+      success: true,
+      fileUrl: stored.url,
+      fileName: file.name,
+      fileSize: file.size,
+      mimeType: file.type,
       parsed,
-      fileUrl: storedFile.url,
     });
   } catch (err: unknown) {
-    console.error('File parsing route error:', err);
+    console.error('File upload error:', err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'File parsing failed' },
+      { error: err instanceof Error ? err.message : 'Failed to process file upload' },
       { status: 500 }
     );
   }

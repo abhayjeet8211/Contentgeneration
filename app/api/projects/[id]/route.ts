@@ -7,14 +7,39 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       where: { id: params.id },
       include: {
         sources: {
-          include: { analysis: true },
+          include: {
+            analysis: true,
+            contentIntelligence: {
+              include: {
+                transcript: {
+                  include: {
+                    segments: { orderBy: { orderIndex: 'asc' } },
+                  },
+                },
+                videoAnalysis: {
+                  include: {
+                    scenes: { orderBy: { sceneNumber: 'asc' } },
+                  },
+                },
+                presentationAnalysis: {
+                  include: {
+                    slides: { orderBy: { slideNumber: 'asc' } },
+                  },
+                },
+                sourceReferences: true,
+              },
+            },
+          },
           orderBy: { createdAt: 'desc' },
         },
         generations: {
           include: {
             generatedContents: {
-              include: { validation: true },
+              include: { validation: true, versions: true },
             },
+            videoPackage: true,
+            presentationPackage: true,
+            infographicPackage: true,
           },
           orderBy: { createdAt: 'desc' },
         },
