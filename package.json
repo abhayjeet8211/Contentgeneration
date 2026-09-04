@@ -4,12 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate --schema public/prisma/schema.prisma && next build",
     "start": "next start",
     "lint": "next lint",
-    "db:push": "prisma db push",
-    "db:generate": "prisma generate",
+    "test": "npx tsx scripts/test-security.ts",
+    "db:push": "prisma db push --schema public/prisma/schema.prisma",
+    "db:generate": "prisma generate --schema public/prisma/schema.prisma",
     "db:seed": "node --import tsx/esm scripts/seed.ts"
+  },
+  "prisma": {
+    "schema": "public/prisma/schema.prisma"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
@@ -17,12 +21,15 @@
     "@tanstack/react-query": "^5.56.2",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
+    "fast-xml-parser": "^5.11.1",
     "framer-motion": "^11.5.4",
     "jose": "^5.9.2",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.439.0",
     "mammoth": "^1.8.0",
     "next": "14.2.10",
     "pdf-parse": "^1.1.1",
+    "pptxgenjs": "^4.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwind-merge": "^2.5.2",
@@ -31,6 +38,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/jszip": "^3.4.0",
     "@types/node": "^20.16.5",
     "@types/pdf-parse": "^1.1.4",
     "@types/react": "^18.3.5",

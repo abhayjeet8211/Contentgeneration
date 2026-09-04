@@ -32,7 +32,9 @@ export interface DetectedUrlInfo {
   error?: string;
 }
 
-// SSRF Protection: verify hostname is not localhost, loopback, or private RFC1918 / link-local / cloud metadata IP
+import { UrlSecurityValidator, IpRangeValidator, RedirectValidator } from '@/lib/security';
+
+// SSRF Protection: verify protocol and IP safety
 export function isSafeUrl(urlString: string): boolean {
   try {
     const parsed = new URL(urlString);
@@ -41,8 +43,6 @@ export function isSafeUrl(urlString: string): boolean {
     }
 
     const hostname = parsed.hostname.toLowerCase();
-
-    // Disallow loopback / local hostnames
     if (
       hostname === 'localhost' ||
       hostname === '127.0.0.1' ||
@@ -54,20 +54,9 @@ export function isSafeUrl(urlString: string): boolean {
       return false;
     }
 
-    // Disallow IPv4 private ranges
-    // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16 (link local / AWS metadata)
-    const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
-    const match = hostname.match(ipv4Regex);
-    if (match) {
-      const octet1 = parseInt(match[1], 10);
-      const octet2 = parseInt(match[2], 10);
-
-      if (octet1 === 10) return false;
-      if (octet1 === 172 && octet2 >= 16 && octet2 <= 31) return false;
-      if (octet1 === 192 && octet2 === 168) return false;
-      if (octet1 === 169 && octet2 === 254) return false;
-      if (octet1 === 127) return false;
-      if (octet1 === 0) return false;
+    const ipCheck = IpRangeValidator.isPrivateOrReservedIp(hostname);
+    if (ipCheck.isPrivateOrReserved) {
+      return false;
     }
 
     return true;
@@ -104,23 +93,14 @@ export function extractYouTubeVideoId(url: string): string | null {
 export async function detectUrlSource(urlString: string): Promise<DetectedUrlInfo> {
   const cleanUrl = urlString.trim();
 
-  if (!cleanUrl) {
-    return {
-      url: cleanUrl,
-      sourceType: 'UNSUPPORTED',
-      label: 'Invalid URL',
-      valid: false,
-      error: 'URL cannot be empty',
-    };
-  }
-
-  if (!isSafeUrl(cleanUrl)) {
+  const securityScan = await UrlSecurityValidator.validateUrl(cleanUrl);
+  if (!securityScan.valid) {
     return {
       url: cleanUrl,
       sourceType: 'UNSUPPORTED',
       label: 'Blocked URL',
       valid: false,
-      error: 'URL violates security policy or points to private/internal network addresses.',
+      error: securityScan.findings[0]?.message || 'URL violates security policy or points to private/internal network addresses.',
     };
   }
 
@@ -178,22 +158,27 @@ export async function detectUrlSource(urlString: string): Promise<DetectedUrlInf
     };
   }
 
-  // 3. Inspect URL content-type via HEAD or light GET to detect RSS podcast vs Web Article
+  // 3. Inspect URL content-type via SSRF-safe redirect-protected fetch
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6000);
-
-    const response = await fetch(cleanUrl, {
+    const safeRes = await RedirectValidator.safeFetch(cleanUrl, {
       method: 'GET',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 ContentIntelligence/2.0',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,application/rss+xml,*/*;q=0.8',
       },
-      signal: controller.signal,
+      timeoutMs: 6000,
     });
-    clearTimeout(timeout);
 
-    const contentType = response.headers.get('content-type')?.toLowerCase() || '';
+    if (!safeRes.ok) {
+      return {
+        url: cleanUrl,
+        sourceType: 'UNSUPPORTED',
+        label: 'Blocked or Unreachable URL',
+        valid: false,
+        error: safeRes.findings[0]?.message || 'Failed to inspect URL safely.',
+      };
+    }
+
+    const contentType = safeRes.contentType.toLowerCase();
 
     // Check if XML / RSS Feed
     if (
@@ -204,7 +189,7 @@ export async function detectUrlSource(urlString: string): Promise<DetectedUrlInf
       lowerUrl.includes('/feed') ||
       lowerUrl.includes('/podcast')
     ) {
-      const textSample = await response.text();
+      const textSample = safeRes.buffer.toString('utf-8');
       if (textSample.includes('<rss') || textSample.includes('<channel') || textSample.includes('<enclosure')) {
         return {
           url: cleanUrl,

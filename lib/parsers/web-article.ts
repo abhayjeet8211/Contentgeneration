@@ -1,4 +1,5 @@
 import { isSafeUrl } from './url-detector';
+import { RedirectValidator } from '@/lib/security';
 
 export interface ParsedWebArticle {
   title: string;
@@ -11,27 +12,18 @@ export interface ParsedWebArticle {
 }
 
 export async function parseWebArticle(url: string): Promise<ParsedWebArticle> {
-  if (!isSafeUrl(url)) {
-    throw new Error('Blocked: URL target is not allowed under security policy.');
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-
-  const res = await fetch(url, {
+  const safeRes = await RedirectValidator.safeFetch(url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
     },
-    signal: controller.signal,
+    timeoutMs: 10000,
   });
-  clearTimeout(timeout);
 
-  if (!res.ok) {
-    throw new Error(`Failed to fetch web article: HTTP ${res.status}`);
+  if (!safeRes.ok) {
+    throw new Error(`Failed to fetch web article safely: ${safeRes.findings[0]?.message || `HTTP ${safeRes.status}`}`);
   }
 
-  const html = await res.text();
+  const html = safeRes.buffer.toString('utf-8');
 
   // Extract Title
   let title = '';

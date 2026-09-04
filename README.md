@@ -11,17 +11,31 @@ OmniContent AI is an enterprise-grade **Gen AI Content Intelligence and Multimod
 ```text
                                   MULTIMODAL INPUT SOURCES
  [ Text / Prompt ] [ Documents: PDF, DOCX, TXT ] [ Presentations: PPT, PPTX ] [ Audio / Video Upload ] [ URLs: YouTube, Podcasts RSS/Audio, Web Articles ]
-                                            │
-                                            ▼
-                                UNIFIED INGESTION & PARSING
-  • YouTube Provider (Gemini Video & Timestamps)
-  • Audio Pipeline (Gemini Audio, Speaker Diarization, Timestamps, RSS Feed Episode Extractor)
-  • Video Pipeline (Gemini Multimodal Understanding, Scene Analysis, On-Screen Text)
-  • PPT/PPTX Extractor (Slide-by-slide structure, speaker notes, bullet points)
-  • Document & Web Extractor (Clean text, metadata, SSRF-safe URL parsing)
-                                            │
-                                            ▼
-                           STRUCTURED CONTENT INTELLIGENCE
+                                             │
+                                             ▼
+                                 SECURE INGESTION GATEWAY
+   • Filename & Traversal Defense (Null bytes, Windows device names, double extension checks)
+   • Strict Category Size Limits (25MB docs, 10MB images, 100MB audio, 500MB video upfront rejection)
+   • Magic Byte & MIME Validation (Detects disguised PE/ELF/Mach-O binaries across all formats)
+   • Document & Archive Exploit Protection (Zip bomb 100:1 ratio, Zip Slip, PDF JS, Office VBA macros)
+   • URL Scheme & SSRF Defense (HTTP/HTTPS only, loopback/private/metadata IP blocking, DNS resolution)
+   • Manual Redirect Tracking (Up to 5 hops with SSRF re-validation on every redirect target)
+   • Cryptographic SHA-256 Source Hashing & Privacy-Preserving Duplicate Detection
+                                             │
+                              ┌──────────────┴──────────────┐
+                              ▼                             ▼
+                         [REJECTED]                    [ACCEPTED]
+                       Structured 400                       │
+                                                            ▼
+                                                NORMALIZATION & PARSING
+   • YouTube Provider (Gemini Video & Timestamps)
+   • Audio Pipeline (Gemini Audio, Speaker Diarization, Timestamps, RSS Feed Episode Extractor)
+   • Video Pipeline (Gemini Multimodal Understanding, Scene Analysis, On-Screen Text)
+   • PPT/PPTX Extractor (Slide-by-slide structure, speaker notes, bullet points)
+   • Document & Web Extractor (Clean text, metadata, SSRF-safe URL parsing)
+                                             │
+                                             ▼
+                            STRUCTURED CONTENT INTELLIGENCE
   • Executive Summary, Topics, Claims, Key Facts (with source citations)
   • Entities, Dates, Locations, Organizations, Key Statistics (with source traceability)
   • Full Timed Transcript & Speaker Segments
@@ -68,7 +82,7 @@ OmniContent AI is an enterprise-grade **Gen AI Content Intelligence and Multimod
 | **Document Parsers** | **`pdf-parse`**, **`mammoth`** | PDF text extraction and Microsoft Word (`.docx`) raw text extraction |
 | **Presentations** | **`jszip`**, **`fast-xml-parser`**, **`pptxgenjs`** | `.pptx` slide-by-slide XML parsing, notes extraction, and native `.pptx` binary compilation |
 | **Audio & Feeds** | **`fast-xml-parser`**, Native Fetch Streams | Podcast RSS XML feed parser, enclosure audio extractor, and direct stream detection |
-| **Security & Auth** | **`jose`**, **`bcryptjs`**, Custom SSRF URL validator | JWT cookie session security, password hashing, and SSRF private IP blocking |
+| **Security & Gateway** | **`SecurityValidationService`**, **`jose`**, **`bcryptjs`**, Node `dns/promises`, `crypto` | Ingestion security gateway (magic bytes, traversal, archive bombs, SSRF & redirect defense), SHA-256 source hashing, duplicate detection, and JWT auth |
 | **Validation** | **`zod`** | Strict runtime schema validation on AI JSON responses and API payloads |
 | **State & Query** | **`@tanstack/react-query 5`**, **`zustand 4`** | Client-side async state synchronization and UI state management |
 
@@ -76,15 +90,18 @@ OmniContent AI is an enterprise-grade **Gen AI Content Intelligence and Multimod
 
 ## ✨ Key Capabilities & Workspaces
 
-### 1. Multimodal Source Ingestion
+### 1. Multimodal Source Ingestion & Security Perimeter
 - **3-Tab Creation Studio** (`/create`): Choose between Raw Text / Prompt, File Upload, or Media URL.
-- **Supported Upload Formats**: PDF, DOCX, PPT, PPTX, TXT, Images (`JPG`, `PNG`), Audio (`MP3`, `WAV`, `M4A`, `AAC`, `OGG`), Video (`MP4`, `MOV`, `WEBM`).
+- **Cybersecurity Gateway**: All incoming files and URLs pass structural and signature validation before processing.
+- **Supported Upload Formats**: PDF, DOCX, PPT, PPTX, TXT, Images (`JPG`, `PNG`, `WEBP`), Audio (`MP3`, `WAV`, `M4A`, `AAC`, `OGG`), Video (`MP4`, `MOV`, `WEBM`).
+- **File Validation & Exploit Defense**: Category-specific size caps (25MB docs, 10MB images, 100MB audio, 500MB video), magic byte binary detection (`MZ`, `ELF`, Mach-O), ZIP bomb prevention (100:1 ratio, 10,000 entries), PDF embedded script detection, and Office VBA macro blocking.
+- **URL Security & SSRF Defense**: Strictly permits `http`/`https`, resolves DNS to block loopback, RFC1918, and cloud metadata (`169.254.169.254`), and follows redirects safely with re-validation on every hop.
+- **Cryptographic SHA-256 Hashing & Duplicate Detection**: Computes deterministic source hashes and warns of existing sources within the project while maintaining cross-user privacy.
 - **URL Ingestion & Classification**:
   - **YouTube Videos**: Gemini video understanding extracts timestamped transcript segments, visual context, on-screen text, and scene descriptions.
   - **Podcast RSS Feeds**: Automatic feed inspection, channel metadata, show artwork, and interactive episode selector with direct audio stream extraction.
   - **Direct Media URLs**: Instant recognition of online `.mp3`, `.wav`, `.mp4`, and `.pdf` files.
   - **Web Articles**: Clean scraper extracting main readable paragraphs and headings while removing navigation, headers, footers, and ads.
-  - **SSRF Security Protection**: Blocks all private/internal hostnames, loopbacks (`127.0.0.1`, `localhost`), RFC1918 subnets, and cloud metadata endpoints (`169.254.169.254`).
 
 ### 2. Deep Structured Content Intelligence
 The system parses and analyzes the source **once** into a persistent structured representation:
@@ -158,6 +175,29 @@ GEMINI_API_KEY="your-gemini-api-key-here"
 
 # Application Base URL
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
+# Phase 3A Security Configuration
+# File Category Limits (MB)
+MAX_FILE_SIZE_MB=100
+MAX_DOCUMENT_SIZE_MB=25
+MAX_IMAGE_SIZE_MB=10
+MAX_AUDIO_SIZE_MB=100
+MAX_VIDEO_SIZE_MB=500
+
+# Archive Bomb Protection Limits
+MAX_ARCHIVE_ENTRIES=10000
+MAX_UNCOMPRESSED_SIZE_MB=500
+MAX_COMPRESSION_RATIO=100
+
+# URL Security & SSRF Limits
+MAX_URL_REDIRECTS=5
+URL_CONNECTION_TIMEOUT_MS=5000
+URL_REQUEST_TIMEOUT_MS=30000
+MAX_URL_RESPONSE_SIZE_MB=100
+
+# Security Policy
+SECURITY_SCANNER_VERSION="1.0.0"
+SECURITY_REJECT_HIGH_SEVERITY=true
+SECURITY_REJECT_MEDIUM_SEVERITY=false
 ```
 
 ### 3. Initialize the Database
@@ -232,22 +272,150 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 │   ├── auth/                      # Session cookie management and password hashing
 │   ├── db/                        # Prisma client singleton
 │   ├── parsers/                   # Document & Media Parsers
-│   │   ├── document.ts            # Unified document parser router
-│   │   ├── pptx.ts                # PPT/PPTX slide deck XML extractor
-│   │   ├── rss.ts                 # Podcast RSS feed XML parser & episode extractor
-│   │   ├── url-detector.ts        # SSRF-safe URL detector and source classifier
-│   │   └── web-article.ts         # Clean web page text scraper with SSRF protection
-│   └── storage/                   # File system storage service for uploads
+│   ├── parsers/                   # Document, PPTX, RSS, Web, and URL detector
+│   ├── security/                  # Phase 3A: Centralized Secure Content Ingestion Gateway
+│   │   ├── config/                # SecurityConfig (environment variables & defaults)
+│   │   ├── models/                # SecurityFinding & SecurityScanResult models
+│   │   ├── file/                  # Filename, FileSize, FileType, Signature, Archive & Document validators
+│   │   ├── url/                   # UrlScheme, Host, IpRange, SSRF, & Redirect validators
+│   │   ├── hashing/               # ContentHashService (SHA-256 buffer & text hashing)
+│   │   ├── duplicate/             # DuplicateDetector (privacy-preserving duplicate detection)
+│   │   ├── SecurityValidationService.ts # Central Security Gateway
+│   │   └── index.ts               # Barrel export
+│   └── storage/                   # Hardened file system storage service for uploads
 ├── public/
 │   ├── prisma/
-│   │   └── schema.prisma          # Relational Prisma Domain Schema
+│   │   └── schema.prisma          # Relational Prisma Domain Schema with SecurityScan
 │   └── uploads/                   # Stored user uploads
 ├── scripts/
 │   ├── seed.ts                    # Database seed script
-│   └── test_phase2.ts             # Comprehensive automated test suite
+│   ├── test_phase2.ts             # Phase 2 test suite
+│   └── test-security.ts           # Phase 3A Security test suite (Groups A through J)
 ├── package.json                   # NPM dependencies and scripts
 └── tsconfig.json                  # TypeScript configuration
 ```
+
+---
+
+# 🛡️ Secure Content Ingestion Architecture (Phase 3A)
+
+A centralized cybersecurity security layer sits at the ingestion boundary of the platform. Every uploaded file and submitted URL passes comprehensive security validation, cryptographic SHA-256 hashing, and duplicate detection **BEFORE** normalization, parsing, OCR, transcription, video analysis, context extraction, AI processing, or Content Intelligence generation.
+
+```text
+                         USER
+                           │
+                           ▼
+                  ┌────────────────┐
+                  │ INPUT SOURCES  │
+                  ├────────────────┤
+                  │ Files          │
+                  │ URLs           │
+                  │ YouTube        │
+                  │ Podcasts       │
+                  └───────┬────────┘
+                          │
+                          ▼
+        ╔════════════════════════════════╗
+        ║ SECURE INGESTION GATEWAY       ║
+        ╠════════════════════════════════╣
+        ║ Filename Validation            ║
+        ║ Extension Validation           ║
+        ║ MIME Validation                ║
+        ║ Magic Byte Detection           ║
+        ║ File Size Limits               ║
+        ║ Archive Bomb Protection        ║
+        ║ Document Inspection            ║
+        ║ URL Scheme Validation          ║
+        ║ SSRF Protection                ║
+        ║ Redirect Validation            ║
+        ║ SHA-256 Hashing                ║
+        ╚═══════════════╤════════════════╝
+                        │
+              ┌─────────┴─────────┐
+              │                   │
+              ▼                   ▼
+          REJECTED             ACCEPTED
+              │                   │
+              ▼                   ▼
+        Safe Error          NORMALIZATION
+      (No internal leaks)         │
+                                  ▼
+                               PARSING
+                                  │
+                                  ▼
+                        CONTENT INTELLIGENCE
+                                  │
+                                  ▼
+                           AI GENERATION
+```
+
+---
+
+## 🔒 Security Gateways & Validators
+
+### 1. File Security Validation (`FileSecurityValidator`)
+- **Filename Validation (`FilenameValidator`)**:
+  - Blocks directory and path traversal sequences (`../../etc/passwd`, `..\..\Windows\System32`, `..`).
+  - Detects raw and URL-encoded null byte injections (`%00`, `\0`).
+  - Blocks Windows reserved device names (`CON`, `PRN`, `AUX`, `NUL`, `COM1..9`, `LPT1..9`).
+  - Enforces a configurable 255-character maximum filename length.
+  - Detects executable double extensions (`report.pdf.exe`, `image.jpg.js`).
+  - Never writes user-supplied filenames directly to disk; sanitizes base names and generates isolated internal storage identifiers (`safeBase_timestamp_randomHex.ext`).
+- **File Type & Extension Allowlist (`FileTypeValidator`)**:
+  - Explicit allowlist: Documents (`.pdf`, `.docx`, `.ppt`, `.pptx`, `.txt`), Images (`.jpg`, `.jpeg`, `.png`, `.webp`), Audio (`.mp3`, `.wav`, `.m4a`, `.aac`, `.ogg`), Video (`.mp4`, `.mov`, `.webm`).
+  - Denylist of executables/scripts (`.exe`, `.dll`, `.bat`, `.cmd`, `.ps1`, `.sh`, `.vbs`, `.js`, `.jar`, `.msi`, `.scr`, `.com`, `.pif`, `.reg`, etc.).
+  - Declared vs detected MIME validation to reject dangerous disguised types.
+- **File Signature / Magic Byte Inspection (`FileSignatureValidator`)**:
+  - Inspects initial byte signatures across all incoming uploads.
+  - Automatically flags and rejects binary execution headers (`MZ`, `ELF`, Mach-O `FEEDFACE`, Shell `# !`) regardless of declared extension.
+  - Verifies format magic bytes: PDF (`%PDF-`), PNG (`89 50 4E 47`), JPEG (`FF D8 FF`), WebP (`RIFF....WEBP`), ZIP/OpenXML (`PK\x03\x04`), MP3 (`ID3` / frame sync), WAV (`RIFF....WAVE`), OGG (`OggS`), MP4/MOV (`ftyp`), WebM (`1A 45 DF A3`).
+- **Category-Specific File Size Limits (`FileSizeValidator`)**:
+  - Category limits configured via environment variables: Document (25 MB), Image (10 MB), Audio (100 MB), Video (500 MB), General (100 MB).
+  - Validates size upfront before expensive parsing or extraction, returning clear user messages stating maximum allowed limits.
+- **Archive Decompression Bomb Protection (`ArchiveValidator`)**:
+  - Safe ZIP central directory inspection for DOCX and PPTX without extracting contents to disk or RAM.
+  - Enforces `MAX_ARCHIVE_ENTRIES` (10,000), `MAX_UNCOMPRESSED_SIZE_MB` (500 MB), and `MAX_COMPRESSION_RATIO` (100:1).
+  - Checks for nested zip slip path traversal entries (`../../evil.sh`).
+- **Document Safety Inspection (`DocumentSecurityValidator`)**:
+  - **PDF**: Inspects syntax for embedded JavaScript (`/JavaScript`, `/JS`), process launch actions (`/Launch`), embedded files (`/EmbeddedFiles`), and suspicious external URIs without executing any scripts.
+  - **DOCX / PPTX**: Inspects OpenXML archives for VBA macros (`vbaProject.bin`, `vbaData.xml`), embedded executables, and suspicious external relationships.
+
+---
+
+### 2. URL Security & SSRF Protection (`UrlSecurityValidator`)
+- **Scheme Validation (`UrlSchemeValidator`)**:
+  - Strictly permits only `http:` and `https:` schemes.
+  - Blocks unsafe protocols: `file://`, `ftp://`, `gopher://`, `data://`, `javascript://`, `blob://`, `chrome://`, `about://`.
+- **SSRF & Private IP Range Protection (`SsrfProtection`, `HostValidator`, `IpRangeValidator`)**:
+  - Blocks loopback addresses: `localhost`, `127.0.0.0/8`, `::1`.
+  - Blocks RFC1918 private IPv4 subnets: `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`.
+  - Blocks link-local addresses and cloud metadata endpoints: `169.254.0.0/16`, `169.254.169.254` (AWS, GCP, Azure metadata).
+  - Blocks private IPv6 ranges: `::1`, `fc00::/7` (unique local), `fe80::/10` (link local), IPv4-mapped IPv6 (`::ffff:0:0/96`).
+  - Performs real DNS resolution via `node:dns/promises` and validates all resolved IP addresses, mitigating DNS rebinding attacks.
+- **Safe Manual Redirect Following (`RedirectValidator`)**:
+  - Disables blind redirect following (`redirect: 'manual'`).
+  - Validates every redirect target through full scheme and SSRF DNS checks before proceeding.
+  - Enforces `MAX_URL_REDIRECTS` (5) and timeouts (`URL_REQUEST_TIMEOUT_MS` = 30,000 ms, `URL_CONNECTION_TIMEOUT_MS` = 5,000 ms).
+  - Enforces `MAX_URL_RESPONSE_SIZE_MB` (100 MB) on response headers and streamed response body chunks.
+
+---
+
+### 3. Cryptographic Hashing & Duplicate Detection (`ContentHashService`, `DuplicateDetector`)
+- **SHA-256 Source Hashing**:
+  - Computes deterministic SHA-256 hashes on raw file buffers, fetched URL bytes, and normalized UTF-8 text.
+  - Stored alongside `Source` records and `SecurityScan` audit logs for integrity verification and provenance tracking.
+- **Privacy-Preserving Duplicate Detection**:
+  - **Same user + same project**: Displays duplicate notification allowing content reuse.
+  - **Same user + different project**: Displays notice allowing cross-project reference.
+  - **Different users**: Strict zero-leakage privacy boundary. Never discloses whether another user previously uploaded identical content.
+
+---
+
+## ⚠️ Security Limitations & Boundaries
+
+1. **Application-Level Boundary**: This security gateway provides high-assurance application-level validation and structural inspection. It is not an enterprise Antivirus/EDR engine or sandbox hypervisor.
+2. **Zero File Execution**: The platform never executes uploaded binaries, shell scripts, or embedded PDF/Office macros. Content is strictly inspected and parsed as structured text and media metadata.
+3. **Defense-in-Depth Extension**: Organizations requiring perimeter binary detonation can integrate external cloud antivirus scanners (e.g. ClamAV, VirusTotal, AWS GuardDuty) into `SecurityValidationService.validateUploadedFile` prior to parsing.
 
 ---
 
@@ -269,7 +437,22 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 🧪 Production Build Verification
+## 🧪 Testing & Verification
+
+Run the Phase 3A automated security test suite covering all 10 Test Groups (A through J):
+```bash
+npm test
+```
+*Executes all 49 security and ingestion tests across filename attacks, MIME mismatch, size limits, archive bomb protection, document inspection, SSRF blocking, redirect attacks, SHA-256 hashing, duplicate detection, and valid source workflows.*
+
+To verify static TypeScript types:
+```bash
+npx tsc --noEmit
+```
+
+---
+
+## 🏗️ Production Build Verification
 
 To compile and verify the Next.js production build:
 ```bash

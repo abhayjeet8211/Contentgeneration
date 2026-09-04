@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db/prisma';
 import { getAIProvider } from './index';
+import { ContentHashService, securityConfig } from '@/lib/security';
 import {
   GenerationConfig,
   ContentIntelligence,
@@ -20,6 +21,7 @@ export interface ExecutePipelineParams {
   extractedContent?: string;
   config: GenerationConfig;
   mediaBuffer?: Buffer;
+  contentHash?: string;
 }
 
 export async function runContentPipeline(params: ExecutePipelineParams) {
@@ -38,7 +40,17 @@ export async function runContentPipeline(params: ExecutePipelineParams) {
     projectId = project.id;
   }
 
-  // 2. Save source document with status 'PROCESSING'
+  // 2. Compute SHA-256 Source Hash
+  const hash =
+    params.contentHash ||
+    (params.mediaBuffer
+      ? ContentHashService.hashBuffer(params.mediaBuffer)
+      : ContentHashService.hashText(params.extractedContent || params.rawContent));
+  const fileSize =
+    params.mediaBuffer?.length ||
+    Buffer.byteLength(params.extractedContent || params.rawContent, 'utf-8');
+
+  // 3. Save source document with status 'PROCESSING' and security tracking
   const source = await prisma.source.create({
     data: {
       title: params.sourceTitle,
@@ -49,14 +61,39 @@ export async function runContentPipeline(params: ExecutePipelineParams) {
       extractedContent: params.extractedContent || params.rawContent,
       processingStatus: 'PROCESSING',
       progressStep: 'Extracting source data & metadata...',
+      contentHash: hash,
+      hashAlgorithm: 'SHA-256',
+      securityStatus: 'PASSED',
+      securityScanVersion: securityConfig.scannerVersion,
+      securityScannedAt: new Date(),
+      fileSize,
+      detectedMimeType: params.mimeType || 'text/plain',
       projectId,
       metadata: JSON.stringify({
         sourceType: params.sourceType,
         sourceUrl: params.sourceUrl,
         characterCount: params.rawContent.length,
+        contentHash: hash,
+        securityStatus: 'PASSED',
       }),
     },
   });
+
+  // Record Security Scan record
+  try {
+    await prisma.securityScan.create({
+      data: {
+        sourceId: source.id,
+        status: 'PASSED',
+        contentHash: hash,
+        checksPerformed: JSON.stringify(['ContentHashService', 'InputValidation']),
+        findings: JSON.stringify([]),
+        scannerVersion: securityConfig.scannerVersion,
+      },
+    });
+  } catch (err) {
+    console.warn('Failed to record SecurityScan entry in database:', err);
+  }
 
   try {
     // 3. Step: Extract Content Intelligence

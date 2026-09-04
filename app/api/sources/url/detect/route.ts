@@ -2,16 +2,45 @@ import { NextResponse } from 'next/server';
 import { detectUrlSource } from '@/lib/parsers/url-detector';
 import { parsePodcastFeed } from '@/lib/parsers/rss';
 import { parseWebArticle } from '@/lib/parsers/web-article';
+import { SecurityValidationService } from '@/lib/security';
+import { getCurrentUser } from '@/lib/auth/session';
 import { z } from 'zod';
 
 const requestSchema = z.object({
   url: z.string().url('Please enter a valid URL (http/https)'),
+  projectId: z.string().optional(),
 });
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { url } = requestSchema.parse(body);
+    const { url, projectId } = requestSchema.parse(body);
+    const user = await getCurrentUser().catch(() => null);
+
+    // 1. Central Security Gateway URL Validation
+    const securityResult = await SecurityValidationService.validateUrl(url, {
+      userId: user?.id,
+      projectId,
+    });
+
+    if (!securityResult.accepted) {
+      return NextResponse.json(
+        {
+          valid: false,
+          error: securityResult.userMessage || 'URL security validation failed.',
+          securityError: {
+            code: 'SECURITY_VALIDATION_FAILED',
+            message: securityResult.userMessage,
+            findings: securityResult.scanResult.findings.map((f) => ({
+              code: f.code,
+              severity: f.severity,
+              message: f.message,
+            })),
+          },
+        },
+        { status: 400 }
+      );
+    }
 
     const detection = await detectUrlSource(url);
 

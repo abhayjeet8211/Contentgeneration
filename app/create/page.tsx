@@ -27,11 +27,12 @@ import {
   Globe,
   Youtube,
   Radio,
-  Music,
   Check,
   RefreshCw,
   Clock,
   PlayCircle,
+  ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react';
 
 const SAMPLE_TEXT = `Global Cyber Threat Intelligence & Policy Advisory 2026:
@@ -160,6 +161,13 @@ export default function CreateContentPage() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [error, setError] = useState('');
 
+  // Security Gateway States
+  const [securityStatus, setSecurityStatus] = useState<'IDLE' | 'SCANNING' | 'PASSED' | 'REJECTED'>('IDLE');
+  const [securityScanStep, setSecurityScanStep] = useState<string>('');
+  const [securityFindings, setSecurityFindings] = useState<Array<{ code: string; severity: string; message: string }>>([]);
+  const [sourceContentHash, setSourceContentHash] = useState<string>('');
+  const [duplicateMessage, setDuplicateMessage] = useState<string>('');
+
   const PIPELINE_STEPS = [
     'Validating & Ingesting Multimodal Source...',
     'Extracting Facts, Claims, Timestamps & Content Intelligence...',
@@ -179,22 +187,39 @@ export default function CreateContentPage() {
     if (!file) return;
 
     setFileParsing(true);
+    setSecurityStatus('SCANNING');
+    setSecurityScanStep('Validating file safety & magic bytes...');
     setError('');
+    setSecurityFindings([]);
+    setDuplicateMessage('');
 
     const formData = new FormData();
     formData.append('file', file);
 
     try {
+      setSecurityScanStep('Checking file signature & archive boundaries...');
       const res = await fetch('/api/sources/upload', {
         method: 'POST',
         body: formData,
       });
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data.error || 'Failed to process uploaded file');
+      if (!res.ok) {
+        setSecurityStatus('REJECTED');
+        const findings = data.error?.findings || [];
+        setSecurityFindings(findings);
+        const errorMsg = data.error?.message || (typeof data.error === 'string' ? data.error : 'Security validation failed');
+        throw new Error(errorMsg);
+      }
+
+      setSecurityStatus('PASSED');
+      setSourceContentHash(data.contentHash || '');
+      if (data.duplicateInfo?.isDuplicate) {
+        setDuplicateMessage(data.duplicateInfo.message || 'Duplicate content detected.');
+      }
 
       setRawContent(data.parsed.text);
-      setSourceTitle(data.parsed.metadata.fileName || file.name);
+      setSourceTitle(data.fileName || file.name);
       setUploadedSourceType(data.parsed.metadata.fileType || 'FILE');
 
       if (data.parsed.metadata.presentationData) {
@@ -207,9 +232,14 @@ export default function CreateContentPage() {
         );
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error uploading and parsing file');
+      const msg = err instanceof Error ? err.message : 'Error uploading and parsing file';
+      setError(msg);
+      if (securityStatus !== 'REJECTED') {
+        setSecurityStatus('REJECTED');
+      }
     } finally {
       setFileParsing(false);
+      setSecurityScanStep('');
     }
   };
 
@@ -220,7 +250,11 @@ export default function CreateContentPage() {
     }
 
     setDetectingUrl(true);
+    setSecurityStatus('SCANNING');
+    setSecurityScanStep('Validating URL scheme, SSRF checks & host safety...');
     setError('');
+    setSecurityFindings([]);
+    setDuplicateMessage('');
 
     try {
       const res = await fetch('/api/sources/url/detect', {
@@ -231,9 +265,14 @@ export default function CreateContentPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Could not recognize URL');
+        setSecurityStatus('REJECTED');
+        const findings = data.securityError?.findings || [];
+        setSecurityFindings(findings);
+        const errorMsg = data.securityError?.message || data.error || 'Could not recognize URL or blocked by policy';
+        throw new Error(errorMsg);
       }
 
+      setSecurityStatus('PASSED');
       setDetectedData(data);
       if (data.metadata?.title) {
         setSourceTitle(data.metadata.title);
@@ -245,10 +284,13 @@ export default function CreateContentPage() {
         setSelectedPodcastEpisode(data.metadata.episodes[0]);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to inspect URL');
+      const msg = err instanceof Error ? err.message : 'Failed to inspect URL';
+      setError(msg);
       setDetectedData(null);
+      setSecurityStatus('REJECTED');
     } finally {
       setDetectingUrl(false);
+      setSecurityScanStep('');
     }
   };
 
@@ -351,10 +393,67 @@ export default function CreateContentPage() {
           </div>
         </div>
 
-        {error && (
+        {/* Security Failure UI */}
+        {securityStatus === 'REJECTED' && error && (
+          <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 text-slate-800 shadow-sm space-y-3">
+            <div className="flex items-center gap-2.5 text-rose-700 font-bold text-sm">
+              <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
+              <span>Unable to process this source</span>
+            </div>
+            <p className="text-xs text-rose-600 font-medium">
+              The source did not pass security validation.
+            </p>
+            <div className="text-xs text-slate-700 bg-white/80 p-3 rounded-xl border border-rose-200 space-y-1">
+              <span className="font-bold text-slate-900 block">Reason:</span>
+              <span>{error}</span>
+              {securityFindings.length > 0 && (
+                <ul className="mt-2 list-disc list-inside text-[11px] text-slate-500 font-mono space-y-0.5">
+                  {securityFindings.map((f, i) => (
+                    <li key={i}>
+                      [{f.code}]: {f.message}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setError('');
+                setSecurityStatus('IDLE');
+                setSecurityFindings([]);
+                setDuplicateMessage('');
+                setRawContent('');
+                setParsedFileInfo(null);
+                setDetectedData(null);
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors shadow-sm"
+            >
+              Choose Another File / Source
+            </button>
+          </div>
+        )}
+
+        {/* Generic Error UI (non-security) */}
+        {securityStatus !== 'REJECTED' && error && (
           <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center gap-3 shadow-sm">
             <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {/* Duplicate Content Notice */}
+        {duplicateMessage && (
+          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                <strong>Duplicate Source Detected:</strong> {duplicateMessage}
+              </span>
+            </div>
+            <span className="text-[11px] font-semibold text-amber-700 bg-amber-100/70 px-2.5 py-1 rounded-lg">
+              Identical Hash
+            </span>
           </div>
         )}
 
@@ -457,16 +556,38 @@ export default function CreateContentPage() {
                       onChange={handleFileUpload}
                       className="mt-4 block w-full text-xs text-slate-500 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-600 file:text-white hover:file:bg-brand-700 cursor-pointer"
                     />
-                    {fileParsing && (
-                      <div className="mt-3 flex items-center justify-center gap-2 text-xs font-semibold text-brand-600">
-                        <span className="w-3.5 h-3.5 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
-                        <span>Extracting multimodal data...</span>
+                    {(fileParsing || securityScanStep) && (
+                      <div className="mt-3 flex flex-col items-center justify-center gap-1.5 text-xs font-semibold text-brand-600">
+                        <div className="flex items-center gap-2">
+                          <span className="w-3.5 h-3.5 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
+                          <span>{securityScanStep || 'Extracting multimodal data...'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                          <span>Security Gateway Active</span>
+                          <span>•</span>
+                          <span>Magic Byte & Archive Analysis</span>
+                        </div>
                       </div>
                     )}
                     {parsedFileInfo && (
-                      <div className="mt-4 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        <span>{parsedFileInfo}</span>
+                      <div className="mt-4 space-y-2">
+                        <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>{parsedFileInfo}</span>
+                        </div>
+                        {securityStatus === 'PASSED' && (
+                          <div className="p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-[11px] text-slate-600 flex items-center justify-between gap-2 font-mono">
+                            <div className="flex items-center gap-1.5 text-emerald-700 font-semibold">
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Verified Safe Ingestion</span>
+                            </div>
+                            {sourceContentHash && (
+                              <span className="text-slate-500 truncate max-w-[240px]">
+                                SHA-256: {sourceContentHash.slice(0, 16)}...
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -540,6 +661,14 @@ export default function CreateContentPage() {
                     </button>
                   </div>
 
+                  {/* Detecting / Security Scan State */}
+                  {(detectingUrl || (inputMode === 'URL' && securityScanStep)) && (
+                    <div className="p-3 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 flex items-center gap-2.5 shadow-sm">
+                      <span className="w-3.5 h-3.5 border-2 border-brand-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                      <span>{securityScanStep || 'Inspecting URL safety and resolving targets...'}</span>
+                    </div>
+                  )}
+
                   {/* URL Detection Status Badge */}
                   {detectedData && (
                     <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 to-indigo-950 text-white space-y-3 shadow-md">
@@ -554,7 +683,7 @@ export default function CreateContentPage() {
                           </span>
                         </div>
                         <span className="text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
-                          <Check className="w-3 h-3" /> Ready to Analyze
+                          <ShieldCheck className="w-3 h-3 text-emerald-400" /> SSRF & Scheme Verified
                         </span>
                       </div>
 

@@ -1,4 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
+import { RedirectValidator } from '@/lib/security';
 
 export interface PodcastEpisode {
   guid?: string;
@@ -32,16 +33,16 @@ export async function parsePodcastFeed(feedXmlOrUrl: string): Promise<ParsedPodc
   let xmlString = feedXmlOrUrl;
 
   if (feedXmlOrUrl.startsWith('http://') || feedXmlOrUrl.startsWith('https://')) {
-    const res = await fetch(feedXmlOrUrl, {
+    const safeRes = await RedirectValidator.safeFetch(feedXmlOrUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ContentIntelligencePlatform/2.0',
         'Accept': 'application/rss+xml, application/xml, text/xml, */*',
       },
+      timeoutMs: 10000,
     });
-    if (!res.ok) {
-      throw new Error(`Failed to fetch podcast RSS feed: HTTP ${res.status}`);
+    if (!safeRes.ok) {
+      throw new Error(`Failed to fetch podcast RSS feed safely: ${safeRes.findings[0]?.message || `HTTP ${safeRes.status}`}`);
     }
-    xmlString = await res.text();
+    xmlString = safeRes.buffer.toString('utf-8');
   }
 
   const parsed = parser.parse(xmlString);
