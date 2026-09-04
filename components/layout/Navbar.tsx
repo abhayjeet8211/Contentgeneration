@@ -113,6 +113,17 @@ export default function Navbar() {
               <LayoutTemplate className="w-4 h-4" />
               Templates
             </Link>
+            <Link
+              href="/verify"
+              className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                pathname === '/verify'
+                  ? 'bg-white text-brand-600 shadow-sm font-semibold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Verify
+            </Link>
           </nav>
         )}
 

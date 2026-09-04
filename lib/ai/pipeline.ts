@@ -9,6 +9,7 @@ import {
   PresentationContentPackage,
   InfographicContentPackage,
 } from './provider';
+import { fingerprintService } from '@/lib/provenance';
 
 export interface ExecutePipelineParams {
   userId: string;
@@ -377,6 +378,31 @@ export async function runContentPipeline(params: ExecutePipelineParams) {
               visualRecs: JSON.stringify(iPkg.visualRecommendations),
             },
           });
+        }
+
+        // Generate cryptographic and similarity fingerprint & initial provenance record
+        try {
+          const contentToFingerprint = item.packageData || item.content;
+          const { fingerprint } = await fingerprintService.generateAndStoreProvenance(
+            contentToFingerprint,
+            {
+              contentId: generatedContent.id,
+              projectId,
+              contentType: item.format,
+              creatorType: 'ai',
+            }
+          );
+          if (generatedContent.versions?.[0]) {
+            await prisma.contentVersion.update({
+              where: { id: generatedContent.versions[0].id },
+              data: {
+                fingerprint: fingerprint.fingerprint,
+                simHash: fingerprint.simHash,
+              },
+            });
+          }
+        } catch (provErr) {
+          console.error(`Failed to register provenance for content ${generatedContent.id}:`, provErr);
         }
 
         createdOutputs.push(generatedContent);

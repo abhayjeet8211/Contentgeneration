@@ -239,11 +239,49 @@ model GeneratedContent {
   tone         String?
   audience     String?
   purpose      String?
-  packageData  String?           // JSON string for advanced packages (video/presentation/infographic)
-  validation   ValidationResult?
-  versions     ContentVersion[]
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  packageData       String?           // JSON string for advanced packages (video/presentation/infographic)
+  validation        ValidationResult?
+  versions          ContentVersion[]
+  fingerprint       ContentFingerprint?
+  provenanceRecords ProvenanceRecord[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model ContentFingerprint {
+  id                 String           @id @default(uuid())
+  contentId          String           @unique
+  content            GeneratedContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  projectId          String
+  fingerprint        String           // Cryptographic SHA-256 hex digest
+  simHash            String?          // 64-bit SimHash hex digest
+  algorithm          String           @default("SHA-256")
+  fingerprintVersion String           @default("1")
+  contentType        String
+  canonicalBytes     Int?
+  createdAt          DateTime         @default(now())
+
+  @@index([fingerprint])
+  @@index([projectId])
+}
+
+model ProvenanceRecord {
+  id                 String           @id @default(uuid())
+  contentId          String
+  content            GeneratedContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  contentFingerprint String           // SHA-256 hex digest
+  parentFingerprint  String?          // Parent SHA-256 for version chain
+  simHash            String?
+  creatorType        String           @default("ai") // "user" | "system" | "ai"
+  creatorId          String?
+  algorithm          String           @default("SHA-256")
+  fingerprintVersion String           @default("1")
+  contentType        String
+  createdAt          DateTime         @default(now())
+
+  @@index([contentFingerprint])
+  @@index([parentFingerprint])
+  @@index([contentId])
 }
 
 model VideoOutputPackage {
@@ -299,13 +337,17 @@ model InfographicOutputPackage {
 }
 
 model ContentVersion {
-  id            String           @id @default(uuid())
-  contentId     String
-  content       GeneratedContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  versionNumber Int
-  body          String
-  changeSummary String?
-  createdAt     DateTime         @default(now())
+  id                String           @id @default(uuid())
+  contentId         String
+  content           GeneratedContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  versionNumber     Int
+  body              String
+  changeSummary     String?
+  parentContentId   String?
+  parentFingerprint String?
+  fingerprint       String?
+  simHash           String?
+  createdAt         DateTime         @default(now())
 }
 
 model Template {

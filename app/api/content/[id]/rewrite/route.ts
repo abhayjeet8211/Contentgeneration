@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { getAIProvider } from '@/lib/ai';
+import { contentVersionService } from '@/lib/provenance';
 import { z } from 'zod';
 
 const rewriteSchema = z.object({
@@ -56,24 +57,26 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       ? contentRecord.content.replace(selectedText, rewritten)
       : rewritten;
 
-    // Create a new version
-    const versionCount = await prisma.contentVersion.count({ where: { contentId: params.id } });
+    // Create a new version with provenance chain
+    await contentVersionService.createNewVersion({
+      contentId: params.id,
+      projectId: contentRecord.generation.projectId,
+      contentType: contentRecord.format,
+      newBody: finalContent,
+      changeSummary: `AI Rewrite: ${action} ${targetTone ? `(${targetTone})` : ''}`,
+      creatorType: 'ai',
+    });
 
     const updated = await prisma.generatedContent.update({
       where: { id: params.id },
       data: {
         content: finalContent,
         tone: targetTone || contentRecord.tone,
-        versions: {
-          create: {
-            versionNumber: versionCount + 1,
-            body: finalContent,
-            changeSummary: `AI Rewrite: ${action} ${targetTone ? `(${targetTone})` : ''}`,
-          },
-        },
       },
       include: {
         validation: true,
+        fingerprint: true,
+        provenanceRecords: { orderBy: { createdAt: 'asc' } },
         versions: { orderBy: { versionNumber: 'desc' } },
       },
     });

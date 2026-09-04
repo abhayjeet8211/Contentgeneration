@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "npx tsx scripts/test-security.ts",
+    "test:provenance": "npx tsx scripts/test-provenance.ts",
+    "test:all": "npx tsx scripts/test-security.ts && npx tsx scripts/test-provenance.ts",
     "db:push": "prisma db push --schema public/prisma/schema.prisma",
     "db:generate": "prisma generate --schema public/prisma/schema.prisma",
     "db:seed": "node --import tsx/esm scripts/seed.ts"

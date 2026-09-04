@@ -83,6 +83,7 @@ OmniContent AI is an enterprise-grade **Gen AI Content Intelligence and Multimod
 | **Presentations** | **`jszip`**, **`fast-xml-parser`**, **`pptxgenjs`** | `.pptx` slide-by-slide XML parsing, notes extraction, and native `.pptx` binary compilation |
 | **Audio & Feeds** | **`fast-xml-parser`**, Native Fetch Streams | Podcast RSS XML feed parser, enclosure audio extractor, and direct stream detection |
 | **Security & Gateway** | **`SecurityValidationService`**, **`jose`**, **`bcryptjs`**, Node `dns/promises`, `crypto` | Ingestion security gateway (magic bytes, traversal, archive bombs, SSRF & redirect defense), SHA-256 source hashing, duplicate detection, and JWT auth |
+| **Provenance & Identity**| **`FingerprintService`**, **`SimHashService`**, **`CanonicalizationService`** | Deterministic canonicalization (NFC, whitespace, line endings, sorted JSON), SHA-256 fingerprints, 64-bit SimHash, and parent-child provenance lineages |
 | **Validation** | **`zod`** | Strict runtime schema validation on AI JSON responses and API payloads |
 | **State & Query** | **`@tanstack/react-query 5`**, **`zustand 4`** | Client-side async state synchronization and UI state management |
 
@@ -137,9 +138,18 @@ The system parses and analyzes the source **once** into a persistent structured 
 - **Multi-Format Adaptation**: LinkedIn posts, Twitter/X threads, Instagram captions, blog articles, executive memos, and custom formats.
 - **AI Action Bar**: Instant triggers for Shorten, Expand, Simplify, Executive Tone, and Make Engaging.
 - **Factual Validation Score**: AI-audited compliance, fact accuracy percentage (98%+), and claim checklist.
+- **Provenance Tab**: Inspect asset SHA-256 cryptographic identity, copy fingerprint, view algorithm/version tags, 64-bit SimHash, and audit the full version lineage chain ($A \to B \to C$).
 - **Version History & Hashtags**: Snapshot restoration and targeted platform hashtag suite.
 
-### 4. Interactive Source Traceability
+### 4. Content Provenance & Verification Studio (`/verify`)
+- **Public / Authorized Verification**: Paste arbitrary generated content, text, or structured JSON packages to verify authenticity.
+- **Dual-Stage Analysis**:
+  1. Exact cryptographic match against platform provenance registry (`similarity_score: 1.0`).
+  2. Locality-sensitive SimHash Hamming distance comparison detecting modified or related assets.
+- **Configurable Confidence Indicators**: High ($\ge 0.85$), Medium ($\ge 0.65$), Low ($\ge 0.40$), and No Significant Match ($< 0.40$).
+- **Privacy Boundary**: External queries return anonymized safe references (`auth-verified-<hash>`) without revealing internal database records.
+
+### 5. Interactive Source Traceability
 Every generated fact, claim, or statistic is linked back to the source:
 - **YouTube / Video / Audio**: Timestamp citations (e.g. `00:14:32 in YouTube Video`).
 - **Presentations**: Slide number citations (e.g. `Slide 4 in PPTX`).
@@ -198,6 +208,18 @@ MAX_URL_RESPONSE_SIZE_MB=100
 SECURITY_SCANNER_VERSION="1.0.0"
 SECURITY_REJECT_HIGH_SEVERITY=true
 SECURITY_REJECT_MEDIUM_SEVERITY=false
+
+# Phase 3B Content Fingerprinting & Provenance Configuration
+FINGERPRINT_ALGORITHM="SHA-256"
+FINGERPRINT_VERSION="1"
+
+SIMILARITY_ALGORITHM="SIMHASH"
+SIMILARITY_VERSION="1"
+SIMILARITY_SHINGLE_SIZE=3
+
+SIMILARITY_HIGH_THRESHOLD=0.85
+SIMILARITY_MEDIUM_THRESHOLD=0.65
+SIMILARITY_LOW_THRESHOLD=0.40
 ```
 
 ### 3. Initialize the Database
@@ -212,11 +234,12 @@ npx prisma generate --schema public/prisma/schema.prisma
 node --import tsx/esm scripts/seed.ts
 ```
 
-### 4. Run Automated Test Suite
+### 4. Run Automated Test Suites
 ```bash
-npx tsx scripts/test_phase2.ts
+# Run all automated test suites (Phase 3A Security + Phase 3B Provenance)
+npm run test:all
 ```
-*Executes all 30 automated tests validating URL detection, SSRF blocking, RSS parsing, PPTX parsing, Content Intelligence extraction, Video/Presentation/Infographic packages, and PPTX compilation.*
+*Executes all 79 automated tests across security ingestion validation (filename attacks, MIME mismatch, archive bombs, SSRF) and content provenance (SHA-256 canonical hashing, SimHash similarity, version lineages, and verification).*
 
 ### 5. Start Development Server
 ```bash
@@ -235,11 +258,15 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 │   ├── api/                       # Backend Next.js Route Handlers
 │   │   ├── auth/                  # Login, Signup, Logout, Session check
 │   │   ├── content/               # Content retrieval, patching, and AI rewriting
+│   │   │   ├── [id]/provenance/   # Asset provenance identity & immutable lineage chain
+│   │   │   └── [id]/versions/     # Version history with cryptographic fingerprints
 │   │   ├── export/                # PPTX binary generator & SRT/VTT subtitle export
 │   │   │   ├── pptx/route.ts      # Native PowerPoint presentation compilation
 │   │   │   └── subtitles/route.ts # SRT and WebVTT closed captions compilation
 │   │   ├── generation/            # Multi-output creation and per-format retry
 │   │   ├── projects/              # Project and workspace management
+│   │   ├── provenance/            # Content verification endpoints
+│   │   │   └── verify/route.ts    # POST /api/provenance/verify (exact & similarity matching)
 │   │   ├── sources/               # Source status, intelligence, upload, and URL detect
 │   │   │   ├── [id]/intelligence/ # Structured Content Intelligence retrieval
 │   │   │   ├── [id]/status/       # Real-time processing progress polling
@@ -249,13 +276,14 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 │   │   └── video/                 # Video projects and scene routes
 │   ├── create/                    # 3-Tab Ingestion & Output Studio
 │   ├── dashboard/                 # Content Operations Dashboard
-│   ├── editor/[contentId]/        # AI Post Studio & Factual Audit
+│   ├── editor/[contentId]/        # AI Post Studio, Factual Audit & Provenance Inspector
 │   ├── infographic/[id]/          # Infographic Studio (Traceable stats, section builder)
 │   ├── presentation/[id]/         # Presentation Studio (Live slide canvas, notes, PPTX export)
 │   ├── projects/                  # Workspace Hierarchy
 │   │   └── [projectId]/           # Workspace Hub & Source Traceability Inspector
 │   ├── settings/                  # User profile and AI model configuration
 │   ├── templates/                 # Template library
+│   ├── verify/                    # Content Verification Studio (Exact & Heuristic Matching)
 │   ├── video/[videoId]/           # Video Content Package Studio (Storyboard, Script, SRT)
 │   ├── globals.css                # Custom CSS design tokens and utilities
 │   └── layout.tsx                 # Root application layout
@@ -271,8 +299,17 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 │   │       └── mock.ts            # Offline-safe Intelligent Mock Provider
 │   ├── auth/                      # Session cookie management and password hashing
 │   ├── db/                        # Prisma client singleton
-│   ├── parsers/                   # Document & Media Parsers
 │   ├── parsers/                   # Document, PPTX, RSS, Web, and URL detector
+│   ├── provenance/                # Phase 3B: Content Fingerprinting & Provenance Identification
+│   │   ├── canonicalization/      # Text, Structured JSON & Package Canonicalizers (Video, Presentation, Infographic)
+│   │   ├── config/                # ProvenanceConfig (environment settings & thresholds)
+│   │   ├── fingerprint/           # CanonicalizationService, CryptographicFingerprintService, SimilarityFingerprintService, FingerprintService
+│   │   ├── models/                # ContentFingerprint, ProvenanceRecord, VerificationResult, SimilarityResult
+│   │   ├── similarity/            # TokenShinglingService, SimHashService (64-bit), SimilarityScoringService
+│   │   ├── storage/               # ProvenanceStore interface & DatabaseProvenanceStore (Prisma)
+│   │   ├── verification/          # ContentVerificationService (dual-stage exact & similarity check)
+│   │   ├── versioning/            # ContentVersionService (parent-child version lineage chain)
+│   │   └── index.ts               # Barrel export
 │   ├── security/                  # Phase 3A: Centralized Secure Content Ingestion Gateway
 │   │   ├── config/                # SecurityConfig (environment variables & defaults)
 │   │   ├── models/                # SecurityFinding & SecurityScanResult models
@@ -285,12 +322,13 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 │   └── storage/                   # Hardened file system storage service for uploads
 ├── public/
 │   ├── prisma/
-│   │   └── schema.prisma          # Relational Prisma Domain Schema with SecurityScan
+│   │   └── schema.prisma          # Relational Prisma Domain Schema with Provenance & Fingerprints
 │   └── uploads/                   # Stored user uploads
 ├── scripts/
 │   ├── seed.ts                    # Database seed script
 │   ├── test_phase2.ts             # Phase 2 test suite
-│   └── test-security.ts           # Phase 3A Security test suite (Groups A through J)
+│   ├── test-security.ts           # Phase 3A Security test suite (Groups A through J)
+│   └── test-provenance.ts         # Phase 3B Provenance test suite (Scenarios 1 through 10)
 ├── package.json                   # NPM dependencies and scripts
 └── tsconfig.json                  # TypeScript configuration
 ```
@@ -423,27 +461,137 @@ A centralized cybersecurity security layer sits at the ingestion boundary of the
 
 - **`User` / `Session`**: User accounts and encrypted JWT sessions.
 - **`Project`**: Workspaces organizing sources, content intelligence, and generations.
-- **`Source`**: Ingested sources with status (`UPLOADED`, `VALIDATING`, `PROCESSING`, `ANALYZING`, `COMPLETED`, `FAILED`) and progress steps.
+- **`Source`**: Ingested sources with status (`UPLOADED`, `VALIDATING`, `PROCESSING`, `ANALYZING`, `COMPLETED`, `FAILED`), security status, and SHA-256 source hashes.
+- **`SecurityScan`**: Immutable audit logs of file/URL security scans and findings.
 - **`ContentIntelligence`**: Persistent structured knowledge representation (summary, topics, facts, claims, entities, dates, locations, organizations, statistics, quotations, timeline).
 - **`Transcript` & `TranscriptSegment`**: Reconstructed speech with speaker diarization and seconds timing.
 - **`VideoAnalysis` & `VideoAnalysisScene`**: Visual descriptions, on-screen text, camera framing, and audio cues.
 - **`PresentationAnalysis` & `PresentationAnalysisSlide`**: Slide titles, bullets, speaker notes, and layouts.
 - **`SourceReference`**: Fact-to-source traceability records.
-- **`Generation` & `GeneratedContent`**: Generated outputs across formats with validation scores.
+- **`Generation` & `GeneratedContent`**: Generated outputs across formats with validation scores, cryptographic fingerprints, and provenance lineages.
+- **`ContentFingerprint`**: Persistent cryptographic SHA-256 fingerprint and 64-bit SimHash similarity profile for generated content.
+- **`ProvenanceRecord`**: Immutable provenance audit trail tracking asset origin, creator type, and parent-child version lineages ($A \to B \to C$).
 - **`VideoOutputPackage`**: Video concept, teleprompter script, storyboard scenes, narration, subtitles, and visual/audio recommendations.
 - **`PresentationOutputPackage`**: Slide deck metadata, slides, speaker notes, and presentation structure.
 - **`InfographicOutputPackage`**: Main messaging, statistics, section hierarchy, and layout/visual guidance.
-- **`ValidationResult` & `ContentVersion`**: Factual consistency audit scores and edit snapshot history.
+- **`ValidationResult` & `ContentVersion`**: Factual consistency audit scores and version history with parent/child fingerprint links.
+
+---
+
+# 🛡️ Phase 3B — Content Fingerprinting and Provenance Identification
+
+The platform implements an immutable content provenance architecture. Every finalized generated output receives a deterministic canonical representation, a cryptographic SHA-256 identity fingerprint, a 64-bit SimHash similarity profile, and a persistent provenance record tracking parent-child version lineages.
+
+```text
+                  AI GENERATION
+                        │
+                        ▼
+                FINAL CONTENT
+                        │
+                        ▼
+              CANONICALIZATION
+                        │
+            ┌───────────┴───────────┐
+            │                       │
+            ▼                       ▼
+       SHA-256 HASH              SIMHASH
+            │                       │
+            ▼                       ▼
+    EXACT FINGERPRINT      SIMILARITY PROFILE
+            │                       │
+            └───────────┬───────────┘
+                        │
+                        ▼
+                PROVENANCE RECORD
+                        │
+                        ▼
+                  DATABASE STORE
+                        │
+                        ▼
+            FUTURE BLOCKCHAIN ANCHOR
+```
+
+### 1. Distinction: Phase 3A vs. Phase 3B Hashing
+- **Phase 3A Hashing**: `SHA-256(raw_source_bytes)` identifies **input sources** at the ingestion boundary for integrity, security scanning, and duplicate upload prevention.
+- **Phase 3B Fingerprinting**: `SHA-256(canonical_content)` identifies **final generated assets** for provenance identity, edit version lineages ($A \to B \to C$), similarity comparison, and future blockchain anchoring.
+
+### 2. Canonicalization Subsystem (`lib/provenance/canonicalization`)
+- **Text Canonicalization** (`TextCanonicalizer`):
+  - Deterministic Unicode normalization via `NFC`.
+  - Normalization of line breaks (`CRLF`, `CR`, `LF` -> `\n`).
+  - Collapse of horizontal whitespace (`[ \t]+` -> `' '`) with per-line trimming.
+  - Normalization of paragraph gaps (collapsing 3+ consecutive line breaks to `\n\n`) preserving semantic paragraph structure without formatting drift.
+  - Outer whitespace trimming while strictly preserving semantic words, casing, and punctuation.
+- **Structured Content Canonicalization** (`StructuredContentCanonicalizer`):
+  - Deep recursive alphabetical key sorting.
+  - Stable JSON serialization independent of key definition order.
+- **Package Canonicalization** (`PackageCanonicalizer`):
+  - Specialized canonical representations for Video Packages, Slide Presentations, and Infographics.
+  - Strips volatile UI metadata, temporary IDs, and processing timestamps while preserving semantic content, scene sequences, slide order, and section hierarchy.
+
+### 3. Fingerprinting & Similarity Subsystem (`lib/provenance/fingerprint`, `similarity`)
+- **Cryptographic Fingerprint** (`CryptographicFingerprintService`):
+  - 64-character lowercase SHA-256 hex digest computed over canonical UTF-8 bytes.
+- **Locality-Sensitive Similarity** (`SimHashService`, `TokenShinglingService`):
+  - Token shingling generates word n-grams (configurable `SIMILARITY_SHINGLE_SIZE=3`).
+  - Computes 64-bit SimHash via 64-dimensional accumulator vectors.
+  - Computes Hamming distance between SimHashes ($0 \le d \le 64$).
+  - Normalized similarity score: $\text{score} = 1 - (d / 64)$.
+  - Configurable confidence tiers:
+    - $\ge 0.85$: High Confidence
+    - $\ge 0.65$: Medium Confidence
+    - $\ge 0.40$: Low Confidence
+    - $< 0.40$: No Significant Match
+
+### 4. Content Versioning & Provenance Lineage (`ContentVersionService`)
+- When generated content is edited (manually or via AI rewrite):
+  - Version $N$ fingerprint is linked as `parentFingerprint` of Version $N+1$.
+  - Generates new cryptographic SHA-256 and SimHash for Version $N+1$.
+  - Provenance history records are append-only and immutable ($A \to B \to C$).
+
+### 5. ProvenanceStore Abstraction & Future Blockchain Anchor (`lib/provenance/storage`)
+- The `ProvenanceStore` interface abstracts storage operations:
+  - `DatabaseProvenanceStore` implements Prisma / SQLite storage.
+  - Future `BlockchainProvenanceStore` can be slotted in without altering fingerprinting or canonicalization logic.
+  - No smart contracts, crypto wallets, or tokens are implemented in this phase.
+
+### 6. Verification Service & Studio UI
+- **API**: `POST /api/provenance/verify`:
+  - Canonicalizes submitted text or structured content.
+  - Checks for exact cryptographic match in provenance registry.
+  - If no exact match, executes SimHash Hamming scan across stored assets to identify potential related content.
+  - Privacy boundary: Unauthorized cross-project queries receive anonymized safe reference IDs (`auth-verified-<hash>`).
+- **API**: `GET /api/content/[id]/provenance`:
+  - Returns current fingerprint and full immutable provenance history chain.
+- **API**: `GET /api/content/[id]/versions`:
+  - Returns version history with parent/child fingerprint links.
+- **UI**:
+  - Content Editor Provenance Tab (`/editor/[contentId]`): displays SHA-256 hash, algorithm, version, SimHash, copy button, and provenance chain.
+  - Verification Studio (`/verify`): interactive tool to paste arbitrary text/JSON and verify exact provenance or heuristic similarity.
+
+### 7. Technical Limitations
+1. **Cryptographic Avalanche**: SHA-256 provides exact canonicalized identity. Changing a single character produces an entirely different hash.
+2. **Heuristic Similarity**: SimHash and token shingling provide probabilistic lexical similarity. The score is heuristic and does NOT constitute legal proof of copying or plagiarism.
+3. **Paraphrase Boundaries**: Substantive rewrites using completely different vocabulary may evade token-based n-gram similarity.
+4. **Scope Boundaries**: Blockchain transaction anchoring and invisible watermarking are reserved for future phases (Phase 3C is Invisible Watermarking).
 
 ---
 
 ## 🧪 Testing & Verification
 
-Run the Phase 3A automated security test suite covering all 10 Test Groups (A through J):
+Run the complete test suite (Phase 3A Security + Phase 3B Provenance):
 ```bash
-npm test
+npm run test:all
 ```
-*Executes all 49 security and ingestion tests across filename attacks, MIME mismatch, size limits, archive bomb protection, document inspection, SSRF blocking, redirect attacks, SHA-256 hashing, duplicate detection, and valid source workflows.*
+
+Or run test suites individually:
+```bash
+# Phase 3A Security Ingestion Suite (49 tests)
+npm test
+
+# Phase 3B Provenance & Fingerprinting Suite (30 tests)
+npm run test:provenance
+```
 
 To verify static TypeScript types:
 ```bash
@@ -458,7 +606,7 @@ To compile and verify the Next.js production build:
 ```bash
 npm run build
 ```
-*All 26 routes (including API endpoints, studios, and dashboards) compile with zero errors.*
+*All 28 routes (including provenance verification APIs, Verification Studio, studios, and dashboards) compile with zero errors.*
 
 To start the production server:
 ```bash
@@ -469,3 +617,4 @@ npm run start
 
 ## 📄 License
 MIT License. Built with Next.js, Google Gemini, and Prisma.
+
