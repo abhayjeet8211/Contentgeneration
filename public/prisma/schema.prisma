@@ -1,6 +1,6 @@
 // Prisma Schema for Content Intelligence Platform
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -9,13 +9,13 @@ generator client {
 }
 
 model User {
-  id           String      @id @default(uuid())
-  email        String      @unique
+  id           String     @id @default(uuid())
+  email        String     @unique
   passwordHash String
   name         String?
   avatarUrl    String?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
   sessions     Session[]
   projects     Project[]
   templates    Template[]
@@ -46,42 +46,42 @@ model Project {
 }
 
 model Source {
-  id                   String               @id @default(uuid())
-  title                String
-  sourceType           String               // "TEXT" | "PDF" | "DOCX" | "PPT" | "PPTX" | "IMAGE" | "AUDIO" | "VIDEO" | "YOUTUBE" | "PODCAST" | "WEBPAGE" | "PROMPT"
-  sourceUrl            String?
-  mimeType             String?
-  rawContent           String
-  extractedContent     String?
-  processingStatus     String               @default("COMPLETED") // "UPLOADED" | "VALIDATING" | "PROCESSING" | "ANALYZING" | "COMPLETED" | "FAILED"
-  progressStep         String?
-  errorMessage         String?
-  metadata             String?              // JSON metadata (file size, duration, channel, page count, etc)
-  contentHash          String?
-  hashAlgorithm        String?              @default("SHA-256")
-  securityStatus       String?              @default("PASSED") // "PASSED" | "WARNING" | "REJECTED"
-  securityScanVersion  String?
-  securityScannedAt    DateTime?
-  fileSize             Int?
-  detectedMimeType     String?
-  projectId            String
-  project              Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  analysis             ContentAnalysis?     // Legacy 1-to-1 for backward compatibility
-  contentIntelligence  ContentIntelligence? // Deep structured content intelligence
-  generations          Generation[]
-  securityScans        SecurityScan[]
-  createdAt            DateTime             @default(now())
-  updatedAt            DateTime             @updatedAt
+  id                  String               @id @default(uuid())
+  title               String
+  sourceType          String // "TEXT" | "PDF" | "DOCX" | "PPT" | "PPTX" | "IMAGE" | "AUDIO" | "VIDEO" | "YOUTUBE" | "PODCAST" | "WEBPAGE" | "PROMPT"
+  sourceUrl           String?
+  mimeType            String?
+  rawContent          String
+  extractedContent    String?
+  processingStatus    String               @default("COMPLETED") // "UPLOADED" | "VALIDATING" | "PROCESSING" | "ANALYZING" | "COMPLETED" | "FAILED"
+  progressStep        String?
+  errorMessage        String?
+  metadata            String? // JSON metadata (file size, duration, channel, page count, etc)
+  contentHash         String?
+  hashAlgorithm       String?              @default("SHA-256")
+  securityStatus      String?              @default("PASSED") // "PASSED" | "WARNING" | "REJECTED"
+  securityScanVersion String?
+  securityScannedAt   DateTime?
+  fileSize            Int?
+  detectedMimeType    String?
+  projectId           String
+  project             Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  analysis            ContentAnalysis? // Legacy 1-to-1 for backward compatibility
+  contentIntelligence ContentIntelligence? // Deep structured content intelligence
+  generations         Generation[]
+  securityScans       SecurityScan[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 }
 
 model SecurityScan {
   id              String   @id @default(uuid())
   sourceId        String?
   source          Source?  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
-  status          String   // "PASSED" | "WARNING" | "REJECTED"
+  status          String // "PASSED" | "WARNING" | "REJECTED"
   contentHash     String?
-  checksPerformed String   // JSON string array of checks performed
-  findings        String   // JSON string array of SecurityFinding objects
+  checksPerformed String // JSON string array of checks performed
+  findings        String // JSON string array of SecurityFinding objects
   scannerVersion  String   @default("1.0.0")
   createdAt       DateTime @default(now())
 }
@@ -91,10 +91,10 @@ model ContentAnalysis {
   sourceId       String   @unique
   source         Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
   summary        String
-  keyFacts       String   // JSON string array
+  keyFacts       String // JSON string array
   targetAudience String?
-  keyEntities    String?  // JSON string array
-  topics         String?  // JSON string array
+  keyEntities    String? // JSON string array
+  topics         String? // JSON string array
   sentiment      String?  @default("Neutral")
   createdAt      DateTime @default(now())
 }
@@ -105,17 +105,17 @@ model ContentIntelligence {
   source               Source                @relation(fields: [sourceId], references: [id], onDelete: Cascade)
   title                String?
   summary              String
-  topics               String                // JSON array of strings
-  keyFacts             String                // JSON array of { fact: string, citation?: string, timestamp?: string, page?: number, slide?: number }
-  claims               String?               // JSON array of { claim: string, sourceRef?: string, verified: boolean }
-  entities             String?               // JSON array of strings
-  dates                String?               // JSON array of { date: string, context: string }
-  locations            String?               // JSON array of strings
-  organizations        String?               // JSON array of strings
-  statistics           String?               // JSON array of { statistic: string, metric: string, value: string, sourceRef?: string }
-  quotations           String?               // JSON array of { quote: string, speaker?: string, timestamp?: string }
-  importantStatements String?               // JSON array of strings
-  timeline             String?               // JSON array of { timeOrDate: string, event: string }
+  topics               String // JSON array of strings
+  keyFacts             String // JSON array of { fact: string, citation?: string, timestamp?: string, page?: number, slide?: number }
+  claims               String? // JSON array of { claim: string, sourceRef?: string, verified: boolean }
+  entities             String? // JSON array of strings
+  dates                String? // JSON array of { date: string, context: string }
+  locations            String? // JSON array of strings
+  organizations        String? // JSON array of strings
+  statistics           String? // JSON array of { statistic: string, metric: string, value: string, sourceRef?: string }
+  quotations           String? // JSON array of { quote: string, speaker?: string, timestamp?: string }
+  importantStatements  String? // JSON array of strings
+  timeline             String? // JSON array of { timeOrDate: string, event: string }
   targetAudience       String?
   sentiment            String?               @default("Neutral")
   confidence           Float                 @default(1.0)
@@ -128,14 +128,14 @@ model ContentIntelligence {
 }
 
 model Transcript {
-  id                    String                @id @default(uuid())
-  contentIntelligenceId String                @unique
-  contentIntelligence   ContentIntelligence   @relation(fields: [contentIntelligenceId], references: [id], onDelete: Cascade)
+  id                    String              @id @default(uuid())
+  contentIntelligenceId String              @unique
+  contentIntelligence   ContentIntelligence @relation(fields: [contentIntelligenceId], references: [id], onDelete: Cascade)
   fullText              String
-  language              String?               @default("en")
+  language              String?             @default("en")
   duration              Float?
   segments              TranscriptSegment[]
-  createdAt             DateTime              @default(now())
+  createdAt             DateTime            @default(now())
 }
 
 model TranscriptSegment {
@@ -143,21 +143,21 @@ model TranscriptSegment {
   transcriptId String
   transcript   Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
   orderIndex   Int
-  startTime    Float      // in seconds
-  endTime      Float      // in seconds
+  startTime    Float // in seconds
+  endTime      Float // in seconds
   text         String
   speaker      String?
 }
 
 model VideoAnalysis {
-  id                    String                @id @default(uuid())
-  contentIntelligenceId String                @unique
-  contentIntelligence   ContentIntelligence   @relation(fields: [contentIntelligenceId], references: [id], onDelete: Cascade)
+  id                    String               @id @default(uuid())
+  contentIntelligenceId String               @unique
+  contentIntelligence   ContentIntelligence  @relation(fields: [contentIntelligenceId], references: [id], onDelete: Cascade)
   duration              Float?
   thumbnailUrl          String?
   channel               String?
   scenes                VideoAnalysisScene[]
-  createdAt             DateTime              @default(now())
+  createdAt             DateTime             @default(now())
 }
 
 model VideoAnalysisScene {
@@ -190,7 +190,7 @@ model PresentationAnalysisSlide {
   slideNumber            Int
   title                  String
   content                String?
-  bulletPoints           String?              // JSON array of strings
+  bulletPoints           String? // JSON array of strings
   speakerNotes           String?
   layout                 String?              @default("STANDARD")
   visualPrompt           String?
@@ -201,8 +201,8 @@ model SourceReference {
   contentIntelligenceId String
   contentIntelligence   ContentIntelligence @relation(fields: [contentIntelligenceId], references: [id], onDelete: Cascade)
   factOrClaim           String
-  sourceType            String              // "YOUTUBE_TIMESTAMP" | "DOCUMENT_PAGE" | "SLIDE_NUMBER" | "WEB_SECTION" | "AUDIO_TIMESTAMP"
-  location              String              // e.g. "00:14:32", "Page 17", "Slide 4", "Paragraph 6"
+  sourceType            String // "YOUTUBE_TIMESTAMP" | "DOCUMENT_PAGE" | "SLIDE_NUMBER" | "WEB_SECTION" | "AUDIO_TIMESTAMP"
+  location              String // e.g. "00:14:32", "Page 17", "Slide 4", "Paragraph 6"
   quote                 String?
   speaker               String?
   confidence            Float               @default(1.0)
@@ -210,42 +210,42 @@ model SourceReference {
 }
 
 model Generation {
-  id                String             @id @default(uuid())
-  title             String
-  projectId         String
-  project           Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  sourceId          String
-  source            Source             @relation(fields: [sourceId], references: [id], onDelete: Cascade)
-  status            String             @default("COMPLETED") // "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED"
-  metadata          String?            // JSON configuration (tones, audiences, selected formats)
-  generatedContents GeneratedContent[]
-  videoPackage      VideoOutputPackage?
+  id                  String                     @id @default(uuid())
+  title               String
+  projectId           String
+  project             Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sourceId            String
+  source              Source                     @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  status              String                     @default("COMPLETED") // "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED"
+  metadata            String? // JSON configuration (tones, audiences, selected formats)
+  generatedContents   GeneratedContent[]
+  videoPackage        VideoOutputPackage?
   presentationPackage PresentationOutputPackage?
-  infographicPackage InfographicOutputPackage?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  infographicPackage  InfographicOutputPackage?
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
 }
 
 model GeneratedContent {
-  id           String            @id @default(uuid())
-  generationId String
-  generation   Generation        @relation(fields: [generationId], references: [id], onDelete: Cascade)
-  format       String            // "LINKEDIN" | "TWITTER_THREAD" | "INSTAGRAM" | "BLOG" | "EXECUTIVE_SUMMARY" | "BRIEFING" | "EMAIL" | "VIDEO_SCRIPT" | "VIDEO" | "PRESENTATION" | "INFOGRAPHIC" | "CUSTOM"
-  platform     String
-  title        String
-  content      String
-  captions     String?           // JSON array or text
-  hashtags     String?           // JSON array or text
-  tone         String?
-  audience     String?
-  purpose      String?
-  packageData       String?           // JSON string for advanced packages (video/presentation/infographic)
+  id                String              @id @default(uuid())
+  generationId      String
+  generation        Generation          @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  format            String // "LINKEDIN" | "TWITTER_THREAD" | "INSTAGRAM" | "BLOG" | "EXECUTIVE_SUMMARY" | "BRIEFING" | "EMAIL" | "VIDEO_SCRIPT" | "VIDEO" | "PRESENTATION" | "INFOGRAPHIC" | "CUSTOM"
+  platform          String
+  title             String
+  content           String
+  captions          String? // JSON array or text
+  hashtags          String? // JSON array or text
+  tone              String?
+  audience          String?
+  purpose           String?
+  packageData       String? // JSON string for advanced packages (video/presentation/infographic)
   validation        ValidationResult?
   versions          ContentVersion[]
   fingerprint       ContentFingerprint?
   provenanceRecords ProvenanceRecord[]
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 }
 
 model ContentFingerprint {
@@ -253,8 +253,8 @@ model ContentFingerprint {
   contentId          String           @unique
   content            GeneratedContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
   projectId          String
-  fingerprint        String           // Cryptographic SHA-256 hex digest
-  simHash            String?          // 64-bit SimHash hex digest
+  fingerprint        String // Cryptographic SHA-256 hex digest
+  simHash            String? // 64-bit SimHash hex digest
   algorithm          String           @default("SHA-256")
   fingerprintVersion String           @default("1")
   contentType        String
@@ -269,8 +269,8 @@ model ProvenanceRecord {
   id                 String           @id @default(uuid())
   contentId          String
   content            GeneratedContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  contentFingerprint String           // SHA-256 hex digest
-  parentFingerprint  String?          // Parent SHA-256 for version chain
+  contentFingerprint String // SHA-256 hex digest
+  parentFingerprint  String? // Parent SHA-256 for version chain
   simHash            String?
   creatorType        String           @default("ai") // "user" | "system" | "ai"
   creatorId          String?
@@ -295,12 +295,12 @@ model VideoOutputPackage {
   duration     String?
   tone         String?
   format       String?
-  script       String     // Markdown / text script with hook, sections, CTA
-  storyboard   String     // JSON array of Scene items (sceneNumber, start, end, narration, visual, camera, transition)
-  narration    String?    // JSON array of narration lines with timing
-  subtitles    String?    // JSON array of subtitle segments [{start: 0, end: 4.5, text: "..."}]
-  visualRecs   String?    // JSON array of visual asset recommendations
-  musicRecs    String?    // JSON object with music style, mood, energy, cue transitions
+  script       String // Markdown / text script with hook, sections, CTA
+  storyboard   String // JSON array of Scene items (sceneNumber, start, end, narration, visual, camera, transition)
+  narration    String? // JSON array of narration lines with timing
+  subtitles    String? // JSON array of subtitle segments [{start: 0, end: 4.5, text: "..."}]
+  visualRecs   String? // JSON array of visual asset recommendations
+  musicRecs    String? // JSON object with music style, mood, energy, cue transitions
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 }
@@ -314,8 +314,8 @@ model PresentationOutputPackage {
   audience     String?
   objective    String?
   slideCount   Int        @default(6)
-  slides       String     // JSON array of Slide objects (slideNumber, title, mainContent, bulletPoints, visualRec, layoutRec, speakerNotes, sourceReferences)
-  structure    String?    // JSON array of structure flow (Title -> Context -> Problem -> Findings -> Recommendations -> Conclusion)
+  slides       String // JSON array of Slide objects (slideNumber, title, mainContent, bulletPoints, visualRec, layoutRec, speakerNotes, sourceReferences)
+  structure    String? // JSON array of structure flow (Title -> Context -> Problem -> Findings -> Recommendations -> Conclusion)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 }
@@ -327,11 +327,11 @@ model InfographicOutputPackage {
   headline     String
   subheadline  String?
   takeaway     String?
-  keyMessages  String     // JSON array of key takeaways
-  statistics   String     // JSON array of { metric, value, label, sourceRef }
-  sections     String     // JSON array of { sectionTitle, sectionType, content, stat, icon, visualRec }
-  layoutRecs   String?    // JSON object (orientation, visual hierarchy, layout format)
-  visualRecs   String?    // JSON array of visual styles, icons, color palettes, charts
+  keyMessages  String // JSON array of key takeaways
+  statistics   String // JSON array of { metric, value, label, sourceRef }
+  sections     String // JSON array of { sectionTitle, sectionType, content, stat, icon, visualRec }
+  layoutRecs   String? // JSON object (orientation, visual hierarchy, layout format)
+  visualRecs   String? // JSON array of visual styles, icons, color palettes, charts
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 }
@@ -351,18 +351,18 @@ model ContentVersion {
 }
 
 model Template {
-  id             String   @id @default(uuid())
-  name           String
-  category       String   // "LinkedIn", "Marketing", "News", "Educational", "Professional", "Social Media", "Video", "Announcement"
-  description    String
-  format         String   // "LINKEDIN", "BLOG", etc.
-  defaultTone    String?  @default("Professional")
-  defaultAudience String? @default("General")
-  templatePrompt String
-  isSystem       Boolean  @default(false)
-  userId         String?
-  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  createdAt      DateTime @default(now())
+  id              String   @id @default(uuid())
+  name            String
+  category        String // "LinkedIn", "Marketing", "News", "Educational", "Professional", "Social Media", "Video", "Announcement"
+  description     String
+  format          String // "LINKEDIN", "BLOG", etc.
+  defaultTone     String?  @default("Professional")
+  defaultAudience String?  @default("General")
+  templatePrompt  String
+  isSystem        Boolean  @default(false)
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
 }
 
 model MediaAsset {
@@ -400,7 +400,7 @@ model VideoScene {
   visualType     String       @default("GRADIENT") // "GRADIENT" | "IMAGE" | "COLOR"
   visualUrl      String?
   audioUrl       String?
-  captionData    String?      // Subtitles/captions text
+  captionData    String? // Subtitles/captions text
   transition     String?      @default("FADE")
   createdAt      DateTime     @default(now())
 }
@@ -412,7 +412,7 @@ model ValidationResult {
   factScore             Int              @default(95)
   formatComplianceScore Int              @default(98)
   toneAlignmentScore    Int              @default(90)
-  issues                String           // JSON string array of warning/info flags
-  claimsChecked         String           // JSON string array of verified key facts
+  issues                String // JSON string array of warning/info flags
+  claimsChecked         String // JSON string array of verified key facts
   createdAt             DateTime         @default(now())
 }
